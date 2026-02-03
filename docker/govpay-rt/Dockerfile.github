@@ -1,0 +1,79 @@
+FROM eclipse-temurin:21-jre-alpine
+
+ARG govpay_rt_fullversion
+ARG govpay_rt_home=/opt/govpay-rt
+ARG govpay_rt_log=/var/log/govpay-rt
+
+LABEL maintainer="Link.it s.r.l."
+LABEL description="GovPay RT (Ricevute Telematiche) Batch Processor"
+LABEL govpay.rt.version="${govpay_rt_fullversion}"
+USER root
+
+ENV GOVPAY_RT_FULLVERSION=${govpay_rt_fullversion} \
+GOVPAY_RT_LOGDIR=${govpay_rt_log} \
+GOVPAY_RT_HOME=${govpay_rt_home} \
+HSQLDB_FULLVERSION=2.7.4 \
+TZ=Europe/Rome
+
+
+RUN set -eux; \
+apk update; \
+apk upgrade; \
+apk add --no-cache bash curl tar unzip netcat-openbsd tzdata; \
+rm -rf /var/cache/apk/*; \
+echo "${TZ}" > /etc/timezone; \
+addgroup -S govpay ; \
+adduser -S -G govpay govpay; \
+mkdir -p ${GOVPAY_RT_HOME} ${GOVPAY_RT_LOGDIR} /opt/sql /opt/jdbc-drivers; \
+chown -R govpay:govpay ${GOVPAY_RT_HOME} ${GOVPAY_RT_LOGDIR} /opt/sql
+
+WORKDIR ${GOVPAY_RT_HOME}
+
+# Download RT JAR from GitHub release
+RUN set -eux; \
+curl -kL -sS -q -o ${GOVPAY_RT_HOME}/govpay-rt-batch.jar "https://github.com/link-it/govpay-rt-batch/releases/download/${GOVPAY_RT_FULLVERSION}/govpay-rt-batch-${GOVPAY_RT_FULLVERSION}.jar";  \
+ls -la ${GOVPAY_RT_HOME}/; \
+curl -fL -o /tmp/govpay-rt-batch.jar "https://github.com/link-it/govpay-rt-batch/releases/download/${GOVPAY_RT_FULLVERSION}/govpay-rt-batch-${GOVPAY_RT_FULLVERSION}.jar"; \
+mv /tmp/govpay-rt-batch.jar ${GOVPAY_RT_HOME}/govpay-rt-batch.jar; \
+chown govpay:govpay ${GOVPAY_RT_HOME}/govpay-rt-batch.jar; \
+ls -la ${GOVPAY_RT_HOME}/; \
+curl -kL -sS -q -o /tmp/sql.zip "https://github.com/link-it/govpay-rt-batch/releases/download/${GOVPAY_RT_FULLVERSION}/sql.zip"; \
+unzip -q /tmp/sql.zip -d /opt && rm /tmp/sql.zip; \
+chown -R govpay:govpay /opt/sql; \
+curl -kL -sS -q -o /var/tmp/hsqldb-${HSQLDB_FULLVERSION}.zip https://sourceforge.net/projects/hsqldb/files/hsqldb/hsqldb_2_7/hsqldb-${HSQLDB_FULLVERSION}.zip/download; \
+unzip -q -d /opt /var/tmp/hsqldb-${HSQLDB_FULLVERSION}.zip hsqldb-${HSQLDB_FULLVERSION}/hsqldb/lib/*; \
+rm -f  /var/tmp/hsqldb-${HSQLDB_FULLVERSION}.zip
+
+# Copy entrypoint and initialization scripts
+COPY commons/entrypoint.sh commons/init_rt_db.sh /usr/local/bin/
+RUN chown -R govpay:0 /usr/local/bin/entrypoint.sh /usr/local/bin/init_rt_db.sh ${GOVPAY_RT_HOME} ${GOVPAY_RT_LOGDIR} /opt/hsqldb-${HSQLDB_FULLVERSION}/hsqldb /opt/sql \
+&& chmod -Rf g+rwX ${GOVPAY_RT_HOME} ${GOVPAY_RT_LOGDIR} /opt/hsqldb-${HSQLDB_FULLVERSION}/hsqldb/ /opt/sql/ \
+&& chmod ug=rx /usr/local/bin/entrypoint.sh /usr/local/bin/init_rt_db.sh
+
+
+USER govpay
+
+ENV SPRING_BATCH_JOB_ENABLED=false \
+    PAGOPA_RT_CONNECTION_TIMEOUT=10000 \
+    PAGOPA_RT_READ_TIMEOUT=30000 \
+    PAGOPA_RT_MAX_RETRIES=3 \
+    PAGOPA_RT_PAGE_SIZE=1000 \
+    PAGOPA_RT_DEBUGGING=false \
+    GOVPAY_BATCH_ENABLED=true \
+    GOVPAY_BATCH_THREAD_POOL_SIZE=5 \
+    GOVPAY_BATCH_CHUNK_SIZE=100 \
+    GOVPAY_BATCH_SKIP_LIMIT=10 \
+    GOVPAY_BATCH_STALE_THRESHOLD_MINUTES=120 \
+    MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/actuator \
+    SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000 \
+    SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT=10000 \
+    SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=600000 \
+    SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=2 \
+    SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=10 \
+    LOGGING_FILE_NAME=${GOVPAY_RT_LOGDIR}/govpay-rt.log \
+    LOGGING_DIRECTORYPATH=${GOVPAY_RT_LOGDIR} \
+    LOGGING_FILEPREFIX=govpay-rt
+
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD []
