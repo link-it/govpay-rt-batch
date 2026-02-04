@@ -1,0 +1,78 @@
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [CI/CD]
+	Aggiunta funzionalita' #2 - Pipeline di validazione e rilascio
+	Implementata pipeline GitHub Actions completa:
+	- Job build: Maven build, OWASP Dependency Check, JaCoCo coverage, SonarCloud scan
+	- Job release: Creazione GitHub Release con artefatti (JAR, SQL, report)
+	- Job docker: Build e push immagine Docker su Docker Hub
+	Aggiunto script di analisi licenze Python per verifica compatibilita' dipendenze.
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [Docker]
+	Aggiunta funzionalita' #2 - Containerizzazione
+	Aggiunti Dockerfile per build immagine Docker:
+	- Dockerfile.github: Build da GitHub Release
+	- Dockerfile.daFile: Build da JAR locale
+	Aggiunti script di supporto:
+	- build_image.sh: Script per build locale dell'immagine
+	- entrypoint.sh: Script di avvio container con configurazione dinamica
+	- init_rt_db.sh: Script di inizializzazione database
+	Supporto per tutti i database: PostgreSQL, MySQL/MariaDB, Oracle, SQL Server.
+	Configurazione tramite variabili d'ambiente per database, API pagoPA e JVM.
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [Database]
+	Aggiunta funzionalita' #2 - Script SQL multi-database
+	Aggiunti script SQL per tutti i DBMS supportati:
+	- PostgreSQL: tabelle_batch-create.sql, create-db.sql
+	- MySQL/MariaDB: tabelle_batch-create.sql, create-db.sql
+	- Oracle: tabelle_batch-create.sql, create-db.sql
+	- SQL Server: tabelle_batch-create.sql, create-db.sql
+	- HSQLDB: tabelle_batch-create.sql, create-db.sql
+	Creata tabella RT_TEMP con campi: id, id_rendicontazione, cod_dominio, iuv, iur.
+	Aggiunti indici ottimizzati per query batch.
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [Testing]
+	Aggiunta funzionalita' #2 - Test unitari
+	Aggiunti test unitari per la classe GovpayRtBatchApplication.
+	Configurato profilo test con database H2 in-memory.
+	Configurazione JaCoCo per generazione report coverage.
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [Documentation]
+	Aggiunta funzionalita' #2 - Documentazione
+	Aggiornato README.md con:
+	- Logo GovPay
+	- Badge SonarCloud, Docker Hub, License, Spring Boot
+	- Descrizione funzionalita' principali
+	- Istruzioni compilazione, esecuzione e Docker
+	- Tabella database supportati
+	Aggiunto ChangeLog per tracciamento modifiche.
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [ProjectSetup]
+	Aggiunta funzionalita' #1 - Setup progetto iniziale
+	Creato progetto Spring Batch per recupero RT da pagoPA.
+	Configurazione base Spring Boot 3.5.7 con Java 21.
+	Dipendenze principali:
+	- Spring Boot Batch
+	- Spring Data JPA
+	- Spring Boot Actuator
+	- Hibernate 6.6.4
+	- Driver JDBC multi-database (PostgreSQL, MySQL, Oracle, SQL Server, H2)
+	Plugin Maven configurati:
+	- JaCoCo per code coverage
+	- OWASP Dependency Check per security scanning
+
+2025-02-04  Giuliano Pintori <pintori@link.it>
+
+	* [ProjectSetup]
+	Creazione repository
+	Creato repository iniziale per il progetto govpay-rt-batch.
