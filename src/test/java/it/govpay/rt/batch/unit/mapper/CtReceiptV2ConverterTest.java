@@ -197,6 +197,7 @@ class CtReceiptV2ConverterTest {
             transfer.setIban("IT60X0542811101000000123456");
             transfer.setRemittanceInformation("Test payment");
             transfer.setTransferCategory("0101001IM");
+            transfer.setMbdAttachment("attachment-data");
             response.setTransferList(Arrays.asList(transfer));
 
             CtReceiptV2 result = CtReceiptV2Converter.toCtReceiptV2(response);

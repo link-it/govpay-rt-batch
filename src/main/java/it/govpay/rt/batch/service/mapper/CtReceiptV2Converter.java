@@ -91,9 +91,7 @@ public class CtReceiptV2Converter {
 			ctTransferPAReceiptV2.setFiscalCodePA(TransferPA.getFiscalCodePA());
 			ctTransferPAReceiptV2.setIBAN(TransferPA.getIban());
 			ctTransferPAReceiptV2.setIdTransfer(TransferPA.getIdTransfer());
-			if(TransferPA.getMbdAttachment() != null) {
-				ctTransferPAReceiptV2.setMBDAttachment(TransferPA.getMbdAttachment().getBytes());
-			}
+			ctTransferPAReceiptV2.setMBDAttachment(TransferPA.getMbdAttachment().getBytes());
 			ctTransferPAReceiptV2.setMetadata(toCtReceiptV2Metadata(TransferPA.getMetadata()));
 			ctTransferPAReceiptV2.setRemittanceInformation(TransferPA.getRemittanceInformation());
 			ctTransferPAReceiptV2.setTransferAmount(TransferPA.getTransferAmount());

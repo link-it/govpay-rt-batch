@@ -9,6 +9,8 @@ import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.stereotype.Component;
 
+import it.govpay.rt.batch.Costanti;
+
 @Component
 public class WatermarkBootstrapListener implements JobExecutionListener {
 
@@ -23,7 +25,7 @@ public class WatermarkBootstrapListener implements JobExecutionListener {
         String jobName = current.getJobInstance().getJobName();
 
         Long last = findLastWatermark(jobName, current.getId());
-        current.getExecutionContext().putLong("lastProcessedId", last != null ? last : 0L);
+        current.getExecutionContext().putLong(Costanti.LAST_PROCESSED_ID_KEY, last != null ? last : 0L);
     }
 
     private Long findLastWatermark(String jobName, Long currentExecutionId) {
@@ -34,8 +36,8 @@ public class WatermarkBootstrapListener implements JobExecutionListener {
             for (JobExecution je : jobExplorer.getJobExecutions(ji)) {
                 if (je.getId().equals(currentExecutionId)) continue;
                 ExecutionContext ctx = je.getExecutionContext();
-                if (ctx.containsKey("lastProcessedId") && ctx.getLong("lastProcessedId") > 0L) {
-                	return ctx.getLong("lastProcessedId");
+                if (ctx.containsKey(Costanti.LAST_PROCESSED_ID_KEY) && ctx.getLong(Costanti.LAST_PROCESSED_ID_KEY) > 0L) {
+                	return ctx.getLong(Costanti.LAST_PROCESSED_ID_KEY);
                 }
             }
         }

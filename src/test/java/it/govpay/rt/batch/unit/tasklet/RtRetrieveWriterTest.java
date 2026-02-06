@@ -18,6 +18,7 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ExecutionContext;
 
+import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
 import it.govpay.rt.batch.tasklet.RtRetrieveWriter;
 
@@ -80,7 +81,7 @@ class RtRetrieveWriterTest {
 
             writer.write(chunk);
 
-            verify(executionContext).putLong("lastProcessedId", 25L);
+            verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 25L);
         }
 
         @Test
@@ -101,7 +102,7 @@ class RtRetrieveWriterTest {
 
             // Should not throw - just logs the message
             assertDoesNotThrow(() -> writer.write(chunk));
-            verify(executionContext).putLong("lastProcessedId", 10L);
+            verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
         }
 
         @Test
@@ -121,7 +122,7 @@ class RtRetrieveWriterTest {
             Chunk<RtRetrieveBatch> chunk = new Chunk<>(Arrays.asList(batch));
 
             assertDoesNotThrow(() -> writer.write(chunk));
-            verify(executionContext).putLong("lastProcessedId", 10L);
+            verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
         }
 
         @Test
@@ -142,7 +143,7 @@ class RtRetrieveWriterTest {
 
             writer.write(chunk);
 
-            verify(executionContext).putLong("lastProcessedId", 10L);
+            verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
         }
 
         @Test

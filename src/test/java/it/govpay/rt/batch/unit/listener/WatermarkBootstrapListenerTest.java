@@ -19,6 +19,7 @@ import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.item.ExecutionContext;
 
+import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.listener.WatermarkBootstrapListener;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,7 +63,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(0L, currentContext.getLong("lastProcessedId"));
+            assertEquals(0L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
 
         @Test
@@ -72,7 +73,7 @@ class WatermarkBootstrapListenerTest {
             JobInstance prevInstance = mock(JobInstance.class);
             JobExecution prevExecution = mock(JobExecution.class);
             ExecutionContext prevContext = new ExecutionContext();
-            prevContext.putLong("lastProcessedId", 50L);
+            prevContext.putLong(Costanti.LAST_PROCESSED_ID_KEY, 50L);
 
             when(prevExecution.getId()).thenReturn(99L);
             when(prevExecution.getExecutionContext()).thenReturn(prevContext);
@@ -82,7 +83,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(50L, currentContext.getLong("lastProcessedId"));
+            assertEquals(50L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
 
         @Test
@@ -92,7 +93,7 @@ class WatermarkBootstrapListenerTest {
             JobInstance instance = mock(JobInstance.class);
             JobExecution prevExecution = mock(JobExecution.class);
             ExecutionContext prevContext = new ExecutionContext();
-            prevContext.putLong("lastProcessedId", 30L);
+            prevContext.putLong(Costanti.LAST_PROCESSED_ID_KEY, 30L);
 
             when(prevExecution.getId()).thenReturn(99L);
             when(prevExecution.getExecutionContext()).thenReturn(prevContext);
@@ -103,7 +104,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(30L, currentContext.getLong("lastProcessedId"));
+            assertEquals(30L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
 
         @Test
@@ -115,14 +116,14 @@ class WatermarkBootstrapListenerTest {
             // First execution has lastProcessedId = 0 (should be skipped)
             JobExecution execution1 = mock(JobExecution.class);
             ExecutionContext context1 = new ExecutionContext();
-            context1.putLong("lastProcessedId", 0L);
+            context1.putLong(Costanti.LAST_PROCESSED_ID_KEY, 0L);
             when(execution1.getId()).thenReturn(98L);
             when(execution1.getExecutionContext()).thenReturn(context1);
 
             // Second execution has lastProcessedId = 25
             JobExecution execution2 = mock(JobExecution.class);
             ExecutionContext context2 = new ExecutionContext();
-            context2.putLong("lastProcessedId", 25L);
+            context2.putLong(Costanti.LAST_PROCESSED_ID_KEY, 25L);
             when(execution2.getId()).thenReturn(97L);
             when(execution2.getExecutionContext()).thenReturn(context2);
 
@@ -132,7 +133,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(25L, currentContext.getLong("lastProcessedId"));
+            assertEquals(25L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
 
         @Test
@@ -150,7 +151,7 @@ class WatermarkBootstrapListenerTest {
             // Second execution has lastProcessedId = 15
             JobExecution execution2 = mock(JobExecution.class);
             ExecutionContext context2 = new ExecutionContext();
-            context2.putLong("lastProcessedId", 15L);
+            context2.putLong(Costanti.LAST_PROCESSED_ID_KEY, 15L);
             when(execution2.getId()).thenReturn(97L);
             when(execution2.getExecutionContext()).thenReturn(context2);
 
@@ -160,7 +161,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(15L, currentContext.getLong("lastProcessedId"));
+            assertEquals(15L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
 
         @Test
@@ -171,7 +172,7 @@ class WatermarkBootstrapListenerTest {
             // Multiple executions - should return first valid one (most recent)
             JobExecution execution1 = mock(JobExecution.class);
             ExecutionContext context1 = new ExecutionContext();
-            context1.putLong("lastProcessedId", 100L);
+            context1.putLong(Costanti.LAST_PROCESSED_ID_KEY, 100L);
             when(execution1.getId()).thenReturn(99L);
             when(execution1.getExecutionContext()).thenReturn(context1);
 
@@ -184,7 +185,7 @@ class WatermarkBootstrapListenerTest {
 
             listener.beforeJob(currentExecution);
 
-            assertEquals(100L, currentContext.getLong("lastProcessedId"));
+            assertEquals(100L, currentContext.getLong(Costanti.LAST_PROCESSED_ID_KEY));
         }
     }
 }

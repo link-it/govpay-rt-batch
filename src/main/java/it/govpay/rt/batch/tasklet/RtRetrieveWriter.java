@@ -9,6 +9,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,7 +50,7 @@ public class RtRetrieveWriter implements ItemWriter<RtRetrieveBatch> {
                                          .mapToLong(RtRetrieveBatch::getRtId)
                                          .max()
                                          .orElseThrow();
-            stepExecution.getExecutionContext().putLong("lastProcessedId", maxId);
+            stepExecution.getExecutionContext().putLong(Costanti.LAST_PROCESSED_ID_KEY, maxId);
         }
     }
 }
