@@ -59,11 +59,7 @@ public class CtReceiptV2Converter {
 		ctReceiptV2.setMetadata(toCtReceiptV2Metadata(response.getMetadata()));
 		ctReceiptV2.setNoticeNumber(response.getNoticeNumber());
 		ctReceiptV2.setOfficeName(response.getOfficeName());
-		if(response.getOutcome() != null) {
-			ctReceiptV2.setOutcome(StOutcome.fromValue(response.getOutcome()));
-		} else {
-			ctReceiptV2.setOutcome(StOutcome.KO);
-		}
+		ctReceiptV2.setOutcome(StOutcome.fromValue(response.getOutcome()));
 		ctReceiptV2.setPayer(toCtSubjectPayer(response.getPayer()));
 		ctReceiptV2.setPaymentAmount(response.getPaymentAmount());
 		ctReceiptV2.setPaymentDateTime(response.getPaymentDateTimeFormatted());
@@ -146,12 +142,10 @@ public class CtReceiptV2Converter {
 		ctSubject.setStateProvinceRegion(debtor.getStateProvinceRegion());
 		ctSubject.setStreetName(debtor.getStreetName());
 		CtEntityUniqueIdentifier uniqueIdentifier = new CtEntityUniqueIdentifier();
-		if(debtor.getEntityUniqueIdentifierType() != null) {
-			if(debtor.getEntityUniqueIdentifierType().equals(StEntityUniqueIdentifierType.F.toString())) {
-				uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.F);
-			} else {
-				uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.G);
-			}
+		if(debtor.getEntityUniqueIdentifierType().toString().equals(StEntityUniqueIdentifierType.F.toString())) {
+			uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.F);
+		} else {
+			uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.G);
 		}
 		uniqueIdentifier.setEntityUniqueIdentifierValue(debtor.getEntityUniqueIdentifierValue());
 		ctSubject.setUniqueIdentifier(uniqueIdentifier );
@@ -175,12 +169,10 @@ public class CtReceiptV2Converter {
 		ctSubject.setStateProvinceRegion(payer.getStateProvinceRegion());
 		ctSubject.setStreetName(payer.getStreetName());
 		CtEntityUniqueIdentifier uniqueIdentifier = new CtEntityUniqueIdentifier();
-		if(payer.getEntityUniqueIdentifierType() != null) {
-			if(payer.getEntityUniqueIdentifierType().equals(StEntityUniqueIdentifierType.F.toString())) {
-				uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.F);
-			} else {
-				uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.G);
-			}
+		if(payer.getEntityUniqueIdentifierType().toString().equals(StEntityUniqueIdentifierType.F.toString())) {
+			uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.F);
+		} else {
+			uniqueIdentifier.setEntityUniqueIdentifierType(StEntityUniqueIdentifierType.G);
 		}
 		uniqueIdentifier.setEntityUniqueIdentifierValue(payer.getEntityUniqueIdentifierValue());
 		ctSubject.setUniqueIdentifier(uniqueIdentifier );

@@ -231,13 +231,7 @@ public class EventoRtMapper {
         DettaglioRisposta dettaglioRisposta = new DettaglioRisposta();
         dettaglioRisposta.setDataOraRisposta(dataEnd);
         dettaglioRisposta.setHeaders(new ArrayList<>());
-
-        if (exception instanceof SoapFaultClientException soapFault) {
-            dettaglioRisposta.setStatus(BigDecimal.valueOf(500));
-        } else {
-            dettaglioRisposta.setStatus(BigDecimal.valueOf(500));
-        }
-
+        dettaglioRisposta.setStatus(BigDecimal.valueOf(500));
         nuovoEvento.setParametriRisposta(dettaglioRisposta);
     }
 
