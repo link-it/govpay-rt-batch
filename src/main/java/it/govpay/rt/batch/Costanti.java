@@ -1,5 +1,4 @@
 package it.govpay.rt.batch;
-
 public class Costanti {
 	public static final String LAST_PROCESSED_ID_KEY = "lastProcessedId";
 
@@ -19,7 +18,7 @@ public class Costanti {
     // Questo è un path template fisso definito dalla specifica OpenAPI di pagoPA.
     // Non sono URI completi (mancano protocollo e host) ma template che vengono
     // combinati con il baseUrl configurabile in PagoPAProperties.
-    // Soppressione S1075: path template API fissi, non URI configurabili
+    @SuppressWarnings("java:S1075") // Path template fisso da specifica OpenAPI pagoPA, non URI configurabile
     public static final String PATH_GET_RECEIPT = "/organizations/{organizationfiscalcode}/receipts/{iur}/paymentoptions/{iuv}";
 
     // Operazione SOAP per invio ricevuta a GovPay

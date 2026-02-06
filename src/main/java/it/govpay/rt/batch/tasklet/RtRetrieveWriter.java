@@ -23,6 +23,7 @@ public class RtRetrieveWriter implements ItemWriter<RtRetrieveBatch> {
     private StepExecution stepExecution;
 
     public RtRetrieveWriter() {
+    	// Nothing to do
     }
 
     @BeforeStep

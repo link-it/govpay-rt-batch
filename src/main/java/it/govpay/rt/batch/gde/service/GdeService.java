@@ -98,7 +98,7 @@ public class GdeService {
                     eventiApi.addEvento(nuovoEvento);
                     log.debug("Evento {} inviato con successo al GDE", nuovoEvento.getTipoEvento());
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new IllegalStateException("Errore invio evento GDE", e);
                 }
             }, taskExecutor)
             .exceptionally(ex -> {
