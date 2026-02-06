@@ -11,14 +11,11 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
-import it.govpay.rt.batch.config.PagoPAProperties;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.service.GdeService;
 import it.govpay.rt.batch.service.mapper.CtReceiptV2Converter;
-import it.govpay.rt.client.ApiClient;
 import it.govpay.rt.client.api.PaymentReceiptsRestApisApi;
 import it.govpay.rt.client.model.CtReceiptModelResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -39,14 +36,10 @@ public class RtApiService {
 	@Value("${nodeforpa.station_id}")
 	String stationId;
 
-	public RtApiService(RestTemplate rtApiRestTemplate, PagoPAProperties pagoPAProperties,
+	public RtApiService(PaymentReceiptsRestApisApi paymentRtRestApi,
 						@Autowired(required = false) GdeService gdeService) {
+		this.paymentRtRestApi = paymentRtRestApi;
 		this.gdeService = gdeService;
-
-		ApiClient apiClient = new ApiClient(rtApiRestTemplate);
-		apiClient.setBasePath(pagoPAProperties.getBaseUrl());
-		apiClient.setDebugging(pagoPAProperties.isDebugging());
-		this.paymentRtRestApi = new PaymentReceiptsRestApisApi(apiClient);
 	}
 
 	public PaSendRTV2Request retrieveReceipt(RtRetrieveContext rtInfo, CompletableFuture<HttpStatusCode> statusCodeFuture) throws RestClientException {
