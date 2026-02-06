@@ -5,8 +5,10 @@ import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,6 @@ import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 import it.govpay.rt.batch.gde.utils.GdeUtils;
 import it.govpay.gde.client.api.EventiApi;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -40,24 +41,38 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "govpay.gde.enabled", havingValue = "true", matchIfMissing = false)
 public class GdeService {
     private static final String PLACEHOLDER_ORGANIZATION_FISCAL_CODE = "{organizationfiscalcode}";
     private static final String PLACEHOLDER_IUR                      = "{iur}";
     private static final String PLACEHOLDER_IUV                      = "{iuv}";
-	
+
 	private final EventiApi eventiApi;
     private final EventoRtMapper eventoFdrMapper;
     private final ObjectMapper objectMapper;
     private final Jaxb2Marshaller jaxb2Marshaller;
     private final PagoPAProperties pagoPAProperties;
-    
+    private final TaskExecutor taskExecutor;
+
     @Value("${govpay.gde.enabled:false}")
     private Boolean gdeEnabled;
 
     @Value("${govpay.url}")
     private String govpayUrl;
+
+    public GdeService(EventiApi eventiApi,
+                      EventoRtMapper eventoFdrMapper,
+                      ObjectMapper objectMapper,
+                      Jaxb2Marshaller jaxb2Marshaller,
+                      PagoPAProperties pagoPAProperties,
+                      @Qualifier("gdeTaskExecutor") TaskExecutor taskExecutor) {
+        this.eventiApi = eventiApi;
+        this.eventoFdrMapper = eventoFdrMapper;
+        this.objectMapper = objectMapper;
+        this.jaxb2Marshaller = jaxb2Marshaller;
+        this.pagoPAProperties = pagoPAProperties;
+        this.taskExecutor = taskExecutor;
+    }
     
     /**
      * Sends an event to GDE asynchronously.
@@ -79,17 +94,22 @@ public class GdeService {
         }
 
         CompletableFuture.runAsync(() -> {
-            try {
-                eventiApi.addEvento(nuovoEvento);
-                log.debug("Evento {} inviato con successo al GDE", nuovoEvento.getTipoEvento());
-            } catch (Exception ex) {
+                try {
+                    eventiApi.addEvento(nuovoEvento);
+                    log.debug("Evento {} inviato con successo al GDE", nuovoEvento.getTipoEvento());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }, taskExecutor)
+            .exceptionally(ex -> {
                 // Log come warning per non interrompere il batch
                 // L'invio eventi GDE è best-effort: se fallisce, il batch continua
+                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                 log.warn("Impossibile inviare evento {} al GDE (il batch continua normalmente): {}",
-                        nuovoEvento.getTipoEvento(), ex.getMessage());
-                log.debug("Dettaglio errore GDE:", ex);
-            }
-        });
+                        nuovoEvento.getTipoEvento(), cause.getMessage());
+                log.debug("Dettaglio errore GDE:", cause);
+                return null;
+            });
     }
 
     /**
