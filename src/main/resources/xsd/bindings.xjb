@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jxb:bindings version="3.0"
+    xmlns:jxb="https://jakarta.ee/xml/ns/jaxb"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc">
+
+    <!-- Global bindings for date/time types -->
+    <jxb:globalBindings>
+        <xjc:javaType name="java.time.OffsetDateTime"
+                      xmlType="xsd:dateTime"
+                      adapter="it.govpay.rt.batch.utils.OffsetDateTimeAdapter"/>
+        <xjc:javaType name="java.time.LocalDate"
+                      xmlType="xsd:date"
+                      adapter="it.govpay.rt.batch.utils.LocalDateAdapter"/>
+    </jxb:globalBindings>
+
+</jxb:bindings>
