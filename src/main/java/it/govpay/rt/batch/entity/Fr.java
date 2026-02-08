@@ -10,9 +10,7 @@ import lombok.NoArgsConstructor;
  * Entity representing a FDR (Flusso di Rendicontazione)
  */
 @Entity
-@Table(name = "FR", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"cod_flusso", "cod_psp", "revisione"})
-})
+@Table(name = "FR")
 @Data
 @Builder
 @NoArgsConstructor
