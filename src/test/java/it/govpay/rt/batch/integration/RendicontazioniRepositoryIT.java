@@ -113,7 +113,7 @@ class RendicontazioniRepositoryIT {
         entityManager.flush();
         Long firstId = rnd1.getId();
 
-        Rendicontazione rnd2 = createTestData(TAX_CODE + "_2", IUV + "_2", IUR + "_2", null);
+        createTestData(TAX_CODE + "_2", IUV + "_2", IUR + "_2", null);
         entityManager.flush();
         entityManager.clear();
 
