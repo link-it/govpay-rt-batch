@@ -23,7 +23,7 @@ import jakarta.persistence.PersistenceContext;
 @DataJpaTest
 @ActiveProfiles("integration")
 @DisplayName("RendicontazioniRepository Integration Test")
-class RendicontazioniRepositoryIT {
+class RendicontazioniRepositoryTest {
 
     @Autowired
     private RendicontazioniRepository rendicontazioniRepository;
