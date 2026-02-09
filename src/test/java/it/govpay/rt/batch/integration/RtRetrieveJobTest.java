@@ -24,6 +24,11 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
@@ -56,8 +61,17 @@ import javax.xml.namespace.QName;
 
 @SpringBootTest
 @ActiveProfiles("integration-e2e")
+@Import(RtRetrieveJobTest.TestConfig.class)
 @DisplayName("RtRetrieveJob End-to-End Integration Test")
 class RtRetrieveJobTest {
+
+	@TestConfiguration
+	static class TestConfig {
+		@Bean(name = "gdeTaskExecutor")
+		public TaskExecutor gdeTaskExecutor() {
+			return new SyncTaskExecutor();
+		}
+	}
 
 	private static final String TAX_CODE = "12345678901";
 	private static final String IUV = "01234567890123456";
@@ -139,9 +153,6 @@ class RtRetrieveJobTest {
 		// When: launch the job
 		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
 
-		// Wait for async GDE events to complete
-		Thread.sleep(500);
-
 		// Then: job completed successfully
 		assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
 
@@ -205,9 +216,6 @@ class RtRetrieveJobTest {
 
 		// When: launch the job
 		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
-
-		// Wait for async GDE events to complete
-		Thread.sleep(500);
 
 		// Then: job completed (SOAP KO doesn't cause job failure)
 		assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
