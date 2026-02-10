@@ -20,6 +20,7 @@ import org.springframework.batch.item.ExecutionContext;
 
 import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
+import it.govpay.rt.batch.repository.RendicontazioniRepository;
 import it.govpay.rt.batch.tasklet.RtRetrieveWriter;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +33,9 @@ class RtRetrieveWriterTest {
     @Mock
     private ExecutionContext executionContext;
 
+    @Mock
+    private RendicontazioniRepository rendicontazioniRepository;
+
     private RtRetrieveWriter writer;
 
     private static final String TAX_CODE = "12345678901";
@@ -40,7 +44,7 @@ class RtRetrieveWriterTest {
 
     @BeforeEach
     void setUp() {
-        writer = new RtRetrieveWriter();
+        writer = new RtRetrieveWriter(rendicontazioniRepository);
     }
 
     @Nested
@@ -82,6 +86,9 @@ class RtRetrieveWriterTest {
             writer.write(chunk);
 
             verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 25L);
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
+            verify(rendicontazioniRepository).disableRecuperoRt(25L);
+            verify(rendicontazioniRepository).disableRecuperoRt(15L);
         }
 
         @Test
@@ -103,6 +110,7 @@ class RtRetrieveWriterTest {
             // Should not throw - just logs the message
             assertDoesNotThrow(() -> writer.write(chunk));
             verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
         }
 
         @Test
@@ -123,6 +131,7 @@ class RtRetrieveWriterTest {
 
             assertDoesNotThrow(() -> writer.write(chunk));
             verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
         }
 
         @Test
@@ -144,6 +153,7 @@ class RtRetrieveWriterTest {
             writer.write(chunk);
 
             verify(executionContext).putLong(Costanti.LAST_PROCESSED_ID_KEY, 10L);
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
         }
 
         @Test
@@ -176,6 +186,7 @@ class RtRetrieveWriterTest {
             // Should not throw even without stepExecution
             assertDoesNotThrow(() -> writer.write(chunk));
             verifyNoInteractions(executionContext);
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
         }
     }
 
@@ -202,6 +213,7 @@ class RtRetrieveWriterTest {
 
             assertDoesNotThrow(() -> writer.write(chunk));
             verify(stepExecution).getExecutionContext();
+            verify(rendicontazioniRepository).disableRecuperoRt(10L);
         }
     }
 }

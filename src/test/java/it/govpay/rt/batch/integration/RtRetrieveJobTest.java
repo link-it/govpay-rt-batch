@@ -262,6 +262,7 @@ class RtRetrieveJobTest {
 					.iur(iur)
 					.data(LocalDateTime.now())
 					.idPagamento(idPagamento)
+					.eseguiRecuperoRt(true)
 					.build();
 			entityManager.persist(rnd);
 		});

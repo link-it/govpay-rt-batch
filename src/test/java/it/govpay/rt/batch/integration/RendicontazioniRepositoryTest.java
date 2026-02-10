@@ -93,6 +93,7 @@ class RendicontazioniRepositoryTest {
                 .iur(IUR)
                 .data(LocalDateTime.now())
                 .idPagamento(null)
+                .eseguiRecuperoRt(true)
                 .build();
         entityManager.persist(rnd);
         entityManager.flush();
@@ -146,6 +147,7 @@ class RendicontazioniRepositoryTest {
                 .iur(IUR)
                 .data(LocalDateTime.now().minusDays(100))  // Older than 90 days
                 .idPagamento(null)
+                .eseguiRecuperoRt(true)
                 .build();
         entityManager.persist(rnd);
         entityManager.flush();
@@ -181,6 +183,57 @@ class RendicontazioniRepositoryTest {
         }
     }
 
+    @Test
+    @DisplayName("should not find rendicontazione with eseguiRecuperoRt false")
+    void shouldNotFindRendicontazioneWithEseguiRecuperoRtFalse() {
+        // Given: a rendicontazione with eseguiRecuperoRt = false
+        Dominio dominio = Dominio.builder().codDominio(TAX_CODE).build();
+        entityManager.persist(dominio);
+
+        Fr fr = Fr.builder().dominio(dominio).build();
+        entityManager.persist(fr);
+
+        SingoloVersamento sv = SingoloVersamento.builder().build();
+        entityManager.persist(sv);
+
+        Rendicontazione rnd = Rendicontazione.builder()
+                .fr(fr)
+                .singoloVersamento(sv)
+                .iuv(IUV)
+                .iur(IUR)
+                .data(LocalDateTime.now())
+                .idPagamento(null)
+                .eseguiRecuperoRt(false)
+                .build();
+        entityManager.persist(rnd);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When: query for rendicontazioni without pagamento
+        List<Object[]> results = rendicontazioniRepository.findRendicontazioneWithNoPagamento(DATA_LIMITE);
+
+        // Then: no records found (eseguiRecuperoRt is false)
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should disable recupero rt")
+    void shouldDisableRecuperoRt() {
+        // Given: a rendicontazione with eseguiRecuperoRt = true
+        Rendicontazione rnd = createTestData(IUV, IUR, null);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When: disable recupero rt
+        rendicontazioniRepository.disableRecuperoRt(rnd.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then: eseguiRecuperoRt is false
+        Rendicontazione updated = entityManager.find(Rendicontazione.class, rnd.getId());
+        assertFalse(updated.getEseguiRecuperoRt());
+    }
+
     private Rendicontazione createTestData(String iuv, String iur, Long idPagamento) {
         return createTestData(TAX_CODE, iuv, iur, idPagamento);
     }
@@ -202,6 +255,7 @@ class RendicontazioniRepositoryTest {
                 .iur(iur)
                 .data(LocalDateTime.now())
                 .idPagamento(idPagamento)
+                .eseguiRecuperoRt(true)
                 .build();
         entityManager.persist(rnd);
 

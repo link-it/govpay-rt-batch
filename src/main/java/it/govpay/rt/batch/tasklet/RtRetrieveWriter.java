@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
+import it.govpay.rt.batch.repository.RendicontazioniRepository;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -20,10 +21,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RtRetrieveWriter implements ItemWriter<RtRetrieveBatch> {
 
+    private final RendicontazioniRepository rendicontazioniRepository;
     private StepExecution stepExecution;
 
-    public RtRetrieveWriter() {
-    	// Nothing to do
+    public RtRetrieveWriter(RendicontazioniRepository rendicontazioniRepository) {
+    	this.rendicontazioniRepository = rendicontazioniRepository;
     }
 
     @BeforeStep
@@ -38,6 +40,7 @@ public class RtRetrieveWriter implements ItemWriter<RtRetrieveBatch> {
             if (batch == null)
                 log.info("Internal error: no retrieve processor output");
             else {
+                rendicontazioniRepository.disableRecuperoRt(batch.getRtId());
                 if (batch.getMessage() != null)
                     log.info(batch.getMessage());
                 if (batch.getRetrivedTime() != null)

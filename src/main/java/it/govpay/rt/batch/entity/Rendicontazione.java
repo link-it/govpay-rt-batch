@@ -43,4 +43,7 @@ public class Rendicontazione {
 
     @Column(name = "data")
     private LocalDateTime data;
+
+    @Column(name = "esegui_recupero_rt", nullable = false, columnDefinition = "boolean default true")
+    private Boolean eseguiRecuperoRt;
 }
