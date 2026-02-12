@@ -6,9 +6,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.7</version>
+        <groupId>org.gov4j.govpay</groupId>
+        <artifactId>govpay-bom</artifactId>
+        <version>1.1.1-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -24,18 +24,11 @@
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <openapi-generator.version>7.19.0</openapi-generator.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <hibernate.version>6.6.4.Final</hibernate.version>
-        <log4j2.version>2.25.3</log4j2.version>
-
-        <!-- Code Coverage -->
-        <jacoco.version>0.8.13</jacoco.version>
 
         <!-- OWASP Dependency Check -->
         <owasp.falsePositives.dir>src/main/resources/owasp/falsePositives</owasp.falsePositives.dir>
         <owasp>verify</owasp> <!-- owasp phase, use 'none' for disable -->
-        <owasp.plugin.version>12.1.9</owasp.plugin.version>
         <owasp.plugin.autoUpdate>true</owasp.plugin.autoUpdate>
         <owasp.plugin.failBuildOnCVSS>11</owasp.plugin.failBuildOnCVSS>
         <owasp.ossindex.prevents429.sleep>5</owasp.ossindex.prevents429.sleep> <!-- https://github.com/sonatype/ossindex-maven/issues/17 -->
@@ -43,6 +36,19 @@
         <!-- SonarCloud -->
         <sonar.coverage.exclusions>**/test/**,**/*Test*.java</sonar.coverage.exclusions>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <profiles>
         <profile>
@@ -141,9 +147,8 @@
 
         <!-- Hibernate JPA Metamodel Generator -->
         <dependency>
-            <groupId>org.hibernate</groupId>
+            <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-jpamodelgen</artifactId>
-            <version>${hibernate.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -157,7 +162,6 @@
         <dependency>
             <groupId>org.openapitools</groupId>
             <artifactId>jackson-databind-nullable</artifactId>
-            <version>0.2.6</version>
         </dependency>
 
         <!-- Testing -->
@@ -201,7 +205,7 @@
                     <target>${java.version}</target>
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>org.hibernate</groupId>
+                            <groupId>org.hibernate.orm</groupId>
                             <artifactId>hibernate-jpamodelgen</artifactId>
                             <version>${hibernate.version}</version>
                         </path>
@@ -218,7 +222,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>jaxb2-maven-plugin</artifactId>
-                <version>4.1.0</version>
                 <executions>
                     <execution>
                         <id>xjc</id>
@@ -242,9 +245,7 @@
             <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
-                <!-- RELEASE_VERSION -->
-                <version>${openapi-generator.version}</version>
-                <!-- /RELEASE_VERSION -->
+                <version>${openapi.tool.codegen.version}</version>
                 <executions>
                     <execution>
                         <id>generate-rt-organization-client</id>
@@ -320,7 +321,6 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -348,7 +348,6 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>${owasp.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>check-owasp</id>
