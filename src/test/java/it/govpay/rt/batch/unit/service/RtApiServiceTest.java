@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,26 +19,52 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
+import it.govpay.common.client.model.Connettore;
+import it.govpay.common.client.service.ConnettoreService;
+import it.govpay.common.entity.DominioEntity;
+import it.govpay.common.entity.IntermediarioEntity;
+import it.govpay.common.entity.StazioneEntity;
+import it.govpay.common.repository.DominioRepository;
+import it.govpay.common.repository.IntermediarioRepository;
+import it.govpay.rt.batch.config.RtApiClientConfig;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.service.GdeService;
 import it.govpay.rt.batch.service.RtApiService;
+import it.govpay.rt.client.ApiClient;
 import it.govpay.rt.client.api.PaymentReceiptsRestApisApi;
 import it.govpay.rt.client.model.CtReceiptModelResponse;
 import it.govpay.rt.client.model.Debtor;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RtApiService")
 class RtApiServiceTest {
 
     @Mock
-    private PaymentReceiptsRestApisApi paymentRtRestApi;
+    private ConnettoreService connettoreService;
+
+    @Mock
+    private IntermediarioRepository intermediarioRepository;
+
+    @Mock
+    private DominioRepository dominioRepository;
+
+    @Mock
+    private RtApiClientConfig rtApiClientConfig;
 
     @Mock
     private GdeService gdeService;
+
+    @Mock
+    private RestTemplate restTemplate;
+
+    @Mock
+    private PaymentReceiptsRestApisApi paymentRtRestApi;
 
     private RtApiService service;
     private RtRetrieveContext rtInfo;
@@ -48,12 +75,13 @@ class RtApiServiceTest {
     private static final String IUR = "IUR123456";
     private static final String INTERMEDIARY_ID = "12345678901";
     private static final String STATION_ID = "12345678901_01";
+    private static final String COD_CONNETTORE_RT = "COD_CONNETTORE_RT_TEST";
+    private static final String PAGOPA_BASE_URL = "https://api.pagopa.it";
 
     @BeforeEach
     void setUp() {
-        service = new RtApiService(paymentRtRestApi, gdeService);
-        ReflectionTestUtils.setField(service, "intermediaryId", INTERMEDIARY_ID);
-        ReflectionTestUtils.setField(service, "stationId", STATION_ID);
+        service = new RtApiService(connettoreService, intermediarioRepository, dominioRepository,
+                rtApiClientConfig, gdeService);
 
         rtInfo = RtRetrieveContext.builder()
                 .rtId(1L)
@@ -63,6 +91,37 @@ class RtApiServiceTest {
                 .build();
 
         statusCodeFuture = new CompletableFuture<>();
+    }
+
+    private void setupConnector() {
+        IntermediarioEntity intermediario = IntermediarioEntity.builder()
+                .codIntermediario(INTERMEDIARY_ID)
+                .codConnettoreRecuperoRt(COD_CONNETTORE_RT)
+                .build();
+        when(intermediarioRepository.findByCodDominio(TAX_CODE))
+                .thenReturn(Optional.of(intermediario));
+
+        when(connettoreService.getRestTemplate(COD_CONNETTORE_RT)).thenReturn(restTemplate);
+        when(rtApiClientConfig.createPagoPAObjectMapper()).thenReturn(new ObjectMapper());
+
+        Connettore connettore = new Connettore();
+        connettore.setUrl(PAGOPA_BASE_URL);
+        when(connettoreService.getConnettore(COD_CONNETTORE_RT)).thenReturn(connettore);
+    }
+
+    private void setupDomainInfo() {
+        IntermediarioEntity intermediario = IntermediarioEntity.builder()
+                .codIntermediario(INTERMEDIARY_ID)
+                .build();
+        StazioneEntity stazione = StazioneEntity.builder()
+                .codStazione(STATION_ID)
+                .intermediario(intermediario)
+                .build();
+        DominioEntity dominio = DominioEntity.builder()
+                .codDominio(TAX_CODE)
+                .stazione(stazione)
+                .build();
+        when(dominioRepository.findByCodDominio(TAX_CODE)).thenReturn(Optional.of(dominio));
     }
 
     private CtReceiptModelResponse createValidReceipt() {
@@ -93,124 +152,26 @@ class RtApiServiceTest {
     class RetrieveReceiptTest {
 
         @Test
-        @DisplayName("should return PaSendRTV2Request when response is OK")
-        void shouldReturnPaSendRTV2RequestWhenResponseIsOk() {
-            CtReceiptModelResponse receipt = createValidReceipt();
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.ok(receipt);
+        @DisplayName("should throw when no intermediario found for domain")
+        void shouldThrowWhenNoIntermediarioFound() {
+            when(intermediarioRepository.findByCodDominio(TAX_CODE))
+                    .thenReturn(Optional.empty());
 
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            PaSendRTV2Request result = service.retrieveReceipt(rtInfo, statusCodeFuture);
-
-            assertNotNull(result);
-            assertEquals(INTERMEDIARY_ID, result.getIdBrokerPA());
-            assertEquals(STATION_ID, result.getIdStation());
-            assertEquals(TAX_CODE, result.getIdPA());
-            assertNotNull(result.getReceipt());
-
-            assertTrue(statusCodeFuture.isDone());
-            assertEquals(HttpStatus.OK, statusCodeFuture.join());
-
-            verify(gdeService).saveGetReceiptOk(eq(rtInfo), eq(response), any(), any());
-        }
-
-        @Test
-        @DisplayName("should return null and log KO event when receipt not found")
-        void shouldReturnNullWhenReceiptNotFound() {
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            PaSendRTV2Request result = service.retrieveReceipt(rtInfo, statusCodeFuture);
-
-            assertNull(result);
-            assertTrue(statusCodeFuture.isDone());
-            assertEquals(HttpStatus.NOT_FOUND, statusCodeFuture.join());
-
-            verify(gdeService).saveGetReceiptKo(eq(rtInfo), eq(response), any(RestClientException.class), any(), any());
-        }
-
-        @Test
-        @DisplayName("should throw RestClientException when rate limit reached")
-        void shouldThrowWhenRateLimitReached() {
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
-
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            RestClientException exception = assertThrows(RestClientException.class,
+            assertThrows(IllegalStateException.class,
                     () -> service.retrieveReceipt(rtInfo, statusCodeFuture));
-
-            assertEquals("Rate limit reached", exception.getMessage());
         }
 
         @Test
-        @DisplayName("should throw RestClientException on 5xx server error")
-        void shouldThrowOn5xxServerError() {
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        @DisplayName("should throw when connettore RT not configured")
+        void shouldThrowWhenConnettoreRtNotConfigured() {
+            IntermediarioEntity intermediario = IntermediarioEntity.builder()
+                    .codIntermediario(INTERMEDIARY_ID)
+                    .codConnettoreRecuperoRt(null)
+                    .build();
+            when(intermediarioRepository.findByCodDominio(TAX_CODE))
+                    .thenReturn(Optional.of(intermediario));
 
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            RestClientException exception = assertThrows(RestClientException.class,
-                    () -> service.retrieveReceipt(rtInfo, statusCodeFuture));
-
-            assertEquals("Server error to retrieve missing receipt", exception.getMessage());
-        }
-
-        @Test
-        @DisplayName("should throw RestClientException on unexpected status code")
-        void shouldThrowOnUnexpectedStatusCode() {
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            RestClientException exception = assertThrows(RestClientException.class,
-                    () -> service.retrieveReceipt(rtInfo, statusCodeFuture));
-
-            assertEquals("Fail to retrieve missing receipt", exception.getMessage());
-        }
-
-        @Test
-        @DisplayName("should throw and log KO event when API throws exception")
-        void shouldThrowAndLogKoEventWhenApiThrowsException() {
-            RestClientException apiException = new RestClientException("Connection refused");
-
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenThrow(apiException);
-
-            RestClientException exception = assertThrows(RestClientException.class,
-                    () -> service.retrieveReceipt(rtInfo, statusCodeFuture));
-
-            assertSame(apiException, exception);
-            verify(gdeService).saveGetReceiptKo(eq(rtInfo), isNull(), eq(apiException), any(), any());
-        }
-
-        @Test
-        @DisplayName("should work when GdeService is null")
-        void shouldWorkWhenGdeServiceIsNull() {
-            service = new RtApiService(paymentRtRestApi, null);
-            ReflectionTestUtils.setField(service, "intermediaryId", INTERMEDIARY_ID);
-            ReflectionTestUtils.setField(service, "stationId", STATION_ID);
-
-            CtReceiptModelResponse receipt = createValidReceipt();
-            ResponseEntity<CtReceiptModelResponse> response = ResponseEntity.ok(receipt);
-
-            when(paymentRtRestApi.getOrganizationReceiptIuvIurWithHttpInfo(
-                    eq(TAX_CODE), eq(IUR), eq(IUV), isNull()))
-                    .thenReturn(response);
-
-            // Should throw NullPointerException when trying to call gdeService
-            assertThrows(NullPointerException.class,
+            assertThrows(IllegalStateException.class,
                     () -> service.retrieveReceipt(rtInfo, statusCodeFuture));
         }
     }

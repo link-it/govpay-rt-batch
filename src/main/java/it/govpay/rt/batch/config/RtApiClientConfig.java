@@ -1,12 +1,7 @@
 package it.govpay.rt.batch.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.ClientHttpRequestInterceptor;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,52 +12,24 @@ import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.utils.LocalDateFlexibleDeserializer;
 import it.govpay.rt.batch.utils.OffsetDateTimeDeserializer;
 import it.govpay.rt.batch.utils.OffsetDateTimeSerializer;
-import it.govpay.rt.batch.utils.ResponseBodyCapturingInterceptor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.TimeZone;
 
 /**
- * Configuration for FDR API client with authentication
+ * Configuration for RT API client.
+ * Provides the custom ObjectMapper for pagoPA date handling,
+ * used by RtApiService when creating per-domain RestTemplate instances.
  */
 @Slf4j
 @Configuration
 public class RtApiClientConfig {
 
-    private final PagoPAProperties pagoPAProperties;
-
     @Value("${spring.jackson.time-zone:Europe/Rome}")
     private String timezone;
-
-    public RtApiClientConfig(PagoPAProperties pagoPAProperties) {
-        this.pagoPAProperties = pagoPAProperties;
-    }
-
-    @Bean
-    public RestTemplate rtApiRestTemplate(RestTemplateBuilder builder) {
-        RestTemplate restTemplate = builder
-            .rootUri(pagoPAProperties.getBaseUrl())
-            .connectTimeout(Duration.ofMillis(pagoPAProperties.getConnectionTimeout()))
-            .readTimeout(Duration.ofMillis(pagoPAProperties.getReadTimeout()))
-            .additionalInterceptors(subscriptionKeyInterceptor(), responseBodyCapturingInterceptor())
-            .build();
-
-        // Note: BufferingClientHttpRequestFactory is NOT used here because it breaks the request pipeline.
-        // The ResponseBodyCapturingInterceptor already handles buffering the response body for GDE logging.
-
-        // Configure custom ObjectMapper for secure date handling from pagoPA API
-        // Remove default Jackson converter and add our custom one
-        ObjectMapper objectMapper = createPagoPAObjectMapper();
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
-        restTemplate.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
-        restTemplate.getMessageConverters().add(0, converter);
-
-        return restTemplate;
-    }
 
     /**
      * Creates a custom ObjectMapper for pagoPA API client with enhanced date handling security.
@@ -76,7 +43,7 @@ public class RtApiClientConfig {
      *
      * @return configured ObjectMapper for pagoPA API
      */
-    private ObjectMapper createPagoPAObjectMapper() {
+    public ObjectMapper createPagoPAObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 
         // Set timezone from configuration
@@ -114,27 +81,5 @@ public class RtApiClientConfig {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         return objectMapper;
-    }
-
-    /**
-     * Interceptor to add subscription key header to all requests
-     */
-    private ClientHttpRequestInterceptor subscriptionKeyInterceptor() {
-        return (request, body, execution) -> {
-        	log.debug("Adding subscription key header to request: {} -> {}", pagoPAProperties.getSubscriptionKeyHeader(), pagoPAProperties.getSubscriptionKey());
-            request.getHeaders().add(
-                pagoPAProperties.getSubscriptionKeyHeader(),
-                pagoPAProperties.getSubscriptionKey()
-            );
-            return execution.execute(request, body);
-        };
-    }
-
-    /**
-     * Interceptor to capture response body for GDE logging.
-     * This allows capturing the raw response even if deserialization fails.
-     */
-    private ClientHttpRequestInterceptor responseBodyCapturingInterceptor() {
-        return new ResponseBodyCapturingInterceptor();
     }
 }

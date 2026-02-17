@@ -13,13 +13,14 @@ public class Costanti {
     // Pattern per serializzazione date al GDE (3 cifre millisecondi con timezone)
     public static final String PATTERN_TIMESTAMP_3_YYYY_MM_DD_T_HH_MM_SS_SSSXXX = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
-    public static final String MSG_PAYLOAD_NON_SERIALIZZABILE = "Payload non serializzabile";
-
     // Questo è un path template fisso definito dalla specifica OpenAPI di pagoPA.
     // Non sono URI completi (mancano protocollo e host) ma template che vengono
-    // combinati con il baseUrl configurabile in PagoPAProperties.
+    // combinati con il baseUrl configurabile tramite il Connettore nel DB.
     @SuppressWarnings("java:S1075") // Path template fisso da specifica OpenAPI pagoPA, non URI configurabile
     public static final String PATH_GET_RECEIPT = "/organizations/{organizationfiscalcode}/receipts/{iur}/paymentoptions/{iuv}";
+
+    // Operation ID dalla specifica OpenAPI di pagoPA per il recupero ricevuta
+    public static final String OPERATION_GET_RECEIPT = "getOrganizationReceiptIuvIur";
 
     // Operazione SOAP per invio ricevuta a GovPay
     public static final String OPERATION_SEND_RECEIPT = "paSendRTV2";

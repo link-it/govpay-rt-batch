@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.concurrent.Executor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,22 +15,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.task.SyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
-import it.govpay.gde.client.api.EventiApi;
-import it.govpay.gde.client.model.EsitoEvento;
-import it.govpay.gde.client.model.NuovoEvento;
-import it.govpay.rt.batch.config.PagoPAProperties;
+import it.govpay.common.client.model.Connettore;
+import it.govpay.common.configurazione.service.ConfigurazioneService;
+import it.govpay.gde.client.beans.EsitoEvento;
+import it.govpay.gde.client.beans.NuovoEvento;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 import it.govpay.rt.batch.gde.service.GdeService;
@@ -39,7 +39,7 @@ import it.govpay.rt.batch.gde.service.GdeService;
 class GdeServiceTest {
 
     @Mock
-    private EventiApi eventiApi;
+    private ConfigurazioneService configurazioneService;
 
     @Mock
     private EventoRtMapper eventoRtMapper;
@@ -51,10 +51,10 @@ class GdeServiceTest {
     private Jaxb2Marshaller jaxb2Marshaller;
 
     @Mock
-    private PagoPAProperties pagoPAProperties;
+    private RestTemplate gdeRestTemplate;
 
-    // Use SyncTaskExecutor for predictable test execution
-    private TaskExecutor taskExecutor = new SyncTaskExecutor();
+    // Use synchronous executor for predictable test execution
+    private final Executor syncExecutor = Runnable::run;
 
     private GdeService gdeService;
     private RtRetrieveContext rtInfo;
@@ -66,12 +66,12 @@ class GdeServiceTest {
     private static final String IUR = "IUR123456";
     private static final String PAGOPA_BASE_URL = "https://api.pagopa.it";
     private static final String GOVPAY_URL = "https://govpay.example.com/pa";
+    private static final String GDE_ENDPOINT = "http://gde-service/api/v1/eventi";
 
     @BeforeEach
     void setUp() {
-        gdeService = new GdeService(eventiApi, eventoRtMapper, objectMapper,
-                jaxb2Marshaller, pagoPAProperties, taskExecutor);
-        ReflectionTestUtils.setField(gdeService, "gdeEnabled", true);
+        gdeService = new GdeService(objectMapper, syncExecutor, configurazioneService,
+                eventoRtMapper, jaxb2Marshaller);
         ReflectionTestUtils.setField(gdeService, "govpayUrl", GOVPAY_URL);
 
         rtInfo = RtRetrieveContext.builder()
@@ -85,46 +85,53 @@ class GdeServiceTest {
         dataEnd = OffsetDateTime.of(2024, 1, 15, 10, 0, 5, 0, ZoneOffset.UTC);
     }
 
-    private void setupPagoPABaseUrl() {
-        when(pagoPAProperties.getBaseUrl()).thenReturn(PAGOPA_BASE_URL);
+    private void setupGdeEnabled() {
+        when(configurazioneService.isServizioGDEAbilitato()).thenReturn(true);
+        when(configurazioneService.getRestTemplateGDE()).thenReturn(gdeRestTemplate);
+        Connettore gdeConnettore = new Connettore();
+        gdeConnettore.setUrl("http://gde-service/api/v1");
+        when(configurazioneService.getServizioGDE()).thenReturn(gdeConnettore);
     }
 
     @Nested
-    @DisplayName("inviaEvento")
-    class InviaEventoTest {
+    @DisplayName("sendEventAsync")
+    class SendEventAsyncTest {
 
         @Test
         @DisplayName("should send event when GDE is enabled")
-        void shouldSendEventWhenGdeEnabled() throws Exception {
+        void shouldSendEventWhenGdeEnabled() {
+            setupGdeEnabled();
             NuovoEvento evento = new NuovoEvento();
             evento.setTipoEvento("TEST");
 
-            gdeService.inviaEvento(evento);
+            gdeService.sendEventAsync(evento);
 
-            verify(eventiApi).addEvento(evento);
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(evento), eq(Void.class));
         }
 
         @Test
         @DisplayName("should not send event when GDE is disabled")
-        void shouldNotSendEventWhenGdeDisabled() throws Exception {
-            ReflectionTestUtils.setField(gdeService, "gdeEnabled", false);
+        void shouldNotSendEventWhenGdeDisabled() {
+            when(configurazioneService.isServizioGDEAbilitato()).thenReturn(false);
             NuovoEvento evento = new NuovoEvento();
             evento.setTipoEvento("TEST");
 
-            gdeService.inviaEvento(evento);
+            gdeService.sendEventAsync(evento);
 
-            verifyNoInteractions(eventiApi);
+            verifyNoInteractions(gdeRestTemplate);
         }
 
         @Test
         @DisplayName("should handle API exception gracefully")
-        void shouldHandleApiExceptionGracefully() throws Exception {
+        void shouldHandleApiExceptionGracefully() {
+            setupGdeEnabled();
             NuovoEvento evento = new NuovoEvento();
             evento.setTipoEvento("TEST");
-            doThrow(new RuntimeException("API Error")).when(eventiApi).addEvento(any());
+            when(gdeRestTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                    .thenThrow(new RuntimeException("API Error"));
 
             // Should not throw - errors are logged but not propagated
-            assertDoesNotThrow(() -> gdeService.inviaEvento(evento));
+            assertDoesNotThrow(() -> gdeService.sendEventAsync(evento));
         }
     }
 
@@ -134,8 +141,8 @@ class GdeServiceTest {
 
         @Test
         @DisplayName("should create and send OK event for successful GET receipt")
-        void shouldCreateAndSendOkEventForSuccessfulGetReceipt() throws Exception {
-            setupPagoPABaseUrl();
+        void shouldCreateAndSendOkEventForSuccessfulGetReceipt() {
+            setupGdeEnabled();
             ResponseEntity<String> response = ResponseEntity.ok("receipt data");
             NuovoEvento mockEvento = new NuovoEvento();
             mockEvento.setEsito(EsitoEvento.OK);
@@ -143,12 +150,12 @@ class GdeServiceTest {
             when(eventoRtMapper.createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
                     .thenReturn(mockEvento);
 
-            gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd);
+            gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, PAGOPA_BASE_URL);
 
             verify(eventoRtMapper).createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd));
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), contains(TAX_CODE), eq("GET"), anyList());
             verify(eventoRtMapper).setParametriRisposta(eq(mockEvento), eq(dataEnd), eq(response), isNull());
-            verify(eventiApi).addEvento(mockEvento);
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }
 
@@ -158,8 +165,8 @@ class GdeServiceTest {
 
         @Test
         @DisplayName("should create and send KO event for failed GET receipt")
-        void shouldCreateAndSendKoEventForFailedGetReceipt() throws Exception {
-            setupPagoPABaseUrl();
+        void shouldCreateAndSendKoEventForFailedGetReceipt() {
+            setupGdeEnabled();
             ResponseEntity<String> response = ResponseEntity.badRequest().body("error");
             RestClientException exception = new RestClientException("API Error");
             NuovoEvento mockEvento = new NuovoEvento();
@@ -169,11 +176,11 @@ class GdeServiceTest {
                     eq(dataStart), eq(dataEnd), isNull(), any()))
                     .thenReturn(mockEvento);
 
-            gdeService.saveGetReceiptKo(rtInfo, response, exception, dataStart, dataEnd);
+            gdeService.saveGetReceiptKo(rtInfo, response, exception, dataStart, dataEnd, PAGOPA_BASE_URL);
 
             verify(eventoRtMapper).createEventoKo(eq(rtInfo), anyString(), anyString(),
                     eq(dataStart), eq(dataEnd), isNull(), eq(exception));
-            verify(eventiApi).addEvento(mockEvento);
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }
 
@@ -183,7 +190,8 @@ class GdeServiceTest {
 
         @Test
         @DisplayName("should create and send OK event for successful SOAP call")
-        void shouldCreateAndSendOkEventForSuccessfulSoapCall() throws Exception {
+        void shouldCreateAndSendOkEventForSuccessfulSoapCall() {
+            setupGdeEnabled();
             PaSendRTV2Request request = new PaSendRTV2Request();
             PaSendRTV2Response response = new PaSendRTV2Response();
             response.setOutcome(StOutcome.OK);
@@ -199,7 +207,7 @@ class GdeServiceTest {
             verify(eventoRtMapper).createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd));
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), eq(GOVPAY_URL), eq("POST"), anyList());
             verify(eventoRtMapper).setParametriRispostaSoap(eq(mockEvento), eq(dataEnd), eq(response));
-            verify(eventiApi).addEvento(mockEvento);
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }
 
@@ -209,7 +217,8 @@ class GdeServiceTest {
 
         @Test
         @DisplayName("should create and send KO event for failed SOAP call")
-        void shouldCreateAndSendKoEventForFailedSoapCall() throws Exception {
+        void shouldCreateAndSendKoEventForFailedSoapCall() {
+            setupGdeEnabled();
             PaSendRTV2Request request = new PaSendRTV2Request();
             Exception exception = new RuntimeException("SOAP Fault");
 
@@ -226,7 +235,7 @@ class GdeServiceTest {
                     eq(dataStart), eq(dataEnd), eq(exception));
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), eq(GOVPAY_URL), eq("POST"), anyList());
             verify(eventoRtMapper).setParametriRispostaSoapKo(eq(mockEvento), eq(dataEnd), eq(exception));
-            verify(eventiApi).addEvento(mockEvento);
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }
 }

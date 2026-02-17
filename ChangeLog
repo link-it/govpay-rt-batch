@@ -1,3 +1,22 @@
+2025-02-17  Giuliano Pintori <pintori@link.it>
+
+	* [Refactoring]
+	Migrazione a govpay-common
+	Integrazione della libreria condivisa govpay-common per allineare govpay-rt-batch
+	allo stesso pattern infrastrutturale di govpay-fdr-batch.
+	Principali modifiche:
+	- GdeService: estende AbstractGdeService (govpay-common), rimosso client GDE
+	  generato da OpenAPI, invio eventi via RestTemplate da ConfigurazioneService
+	- RtApiService: usa ConnettoreService per creare RestTemplate per-dominio,
+	  risolve intermediaryId/stationId da DB (DominioEntity -> StazioneEntity -> IntermediarioEntity)
+	- GdeUtils rinominato in RtGdeUtils: mantiene solo serializzazione SOAP,
+	  payload REST e headers delegati a GdeUtils di govpay-common
+	- Rimossi: ResponseBodyHolder, ResponseBodyCapturingInterceptor, AsyncConfiguration,
+	  PagoPAClientConfig, PagoPAProperties, openapi.yaml GDE
+	- RtApiClientConfig semplificato: solo createPagoPAObjectMapper()
+	- Aggiornati import modelli GDE: it.govpay.gde.client.model -> it.govpay.gde.client.beans
+	- Rimossa configurazione pagopa.rt.*, govpay.gde.*, govpay.async.*, nodeforpa.* da properties
+
 2025-02-08  Giuliano Pintori <pintori@link.it>
 
 	* [ProjectSetup]

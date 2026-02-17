@@ -21,12 +21,12 @@ import org.springframework.web.client.RestClientException;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
-import it.govpay.gde.client.model.CategoriaEvento;
-import it.govpay.gde.client.model.ComponenteEvento;
-import it.govpay.gde.client.model.EsitoEvento;
-import it.govpay.gde.client.model.Header;
-import it.govpay.gde.client.model.NuovoEvento;
-import it.govpay.gde.client.model.RuoloEvento;
+import it.govpay.gde.client.beans.CategoriaEvento;
+import it.govpay.gde.client.beans.ComponenteEvento;
+import it.govpay.gde.client.beans.EsitoEvento;
+import it.govpay.gde.client.beans.Header;
+import it.govpay.gde.client.beans.NuovoEvento;
+import it.govpay.gde.client.beans.RuoloEvento;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 

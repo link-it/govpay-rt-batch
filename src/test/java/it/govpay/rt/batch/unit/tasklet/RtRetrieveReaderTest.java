@@ -17,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import it.govpay.rt.batch.config.PagoPAProperties;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.repository.RendicontazioniRepository;
 import it.govpay.rt.batch.tasklet.RtRetrieveReader;
@@ -29,8 +28,7 @@ class RtRetrieveReaderTest {
     @Mock
     private RendicontazioniRepository rndRepository;
 
-    @Mock
-    private PagoPAProperties pagoPAProperties;
+    private static final int FINESTRA_TEMPORALE = 30;
 
     private static final String TAX_CODE_1 = "12345678901";
     private static final String TAX_CODE_2 = "98765432101";
@@ -46,8 +44,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should query repository without lastProcessedId when lastProcessedId is 0")
         void shouldQueryRepositoryWithoutLastProcessedIdWhenZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -60,8 +57,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should query repository with lastProcessedId when lastProcessedId > 0")
         void shouldQueryRepositoryWithLastProcessedIdWhenGreaterThanZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 100L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 100L);
             when(rndRepository.findRendicontazioneWithNoPagamentoAfterId(eq(100L), any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -74,8 +70,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should populate list with results from repository using Long ids")
         void shouldPopulateListWithResultsUsingLongIds() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUR_1, IUV_1});
@@ -101,8 +96,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should handle BigInteger ids from repository")
         void shouldHandleBigIntegerIdsFromRepository() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUR_1, IUV_1});
@@ -124,8 +118,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return items in order and null when exhausted")
         void shouldReturnItemsInOrderAndNullWhenExhausted() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUR_1, IUV_1});
@@ -153,8 +146,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return null immediately when no items")
         void shouldReturnNullImmediatelyWhenNoItems() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -172,8 +164,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for unsupported types")
         void shouldThrowForUnsupportedTypes() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, pagoPAProperties, 0L);
-            when(pagoPAProperties.getFinestraTemporale()).thenReturn(30);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             // Create a result with an Integer (unsupported)
             List<Object[]> results = new ArrayList<>();

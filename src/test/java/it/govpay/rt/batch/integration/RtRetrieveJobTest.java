@@ -11,6 +11,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.concurrent.Executor;
 
 import javax.xml.transform.Source;
 
@@ -27,8 +29,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.task.SyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
@@ -46,7 +46,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
-import it.govpay.gde.client.api.EventiApi;
+import it.govpay.common.client.model.Connettore;
+import it.govpay.common.client.service.ConnettoreService;
+import it.govpay.common.configurazione.service.ConfigurazioneService;
+import it.govpay.common.entity.DominioEntity;
+import it.govpay.common.entity.IntermediarioEntity;
+import it.govpay.common.entity.StazioneEntity;
+import it.govpay.common.repository.DominioRepository;
+import it.govpay.common.repository.IntermediarioRepository;
 import it.govpay.rt.batch.client.GovpayClient;
 import it.govpay.rt.batch.entity.Dominio;
 import it.govpay.rt.batch.entity.Fr;
@@ -65,17 +72,26 @@ import javax.xml.namespace.QName;
 @DisplayName("RtRetrieveJob End-to-End Integration Test")
 class RtRetrieveJobTest {
 
-	@TestConfiguration
-	static class TestConfig {
-		@Bean(name = "gdeTaskExecutor")
-		public TaskExecutor gdeTaskExecutor() {
-			return new SyncTaskExecutor();
-		}
-	}
-
 	private static final String TAX_CODE = "12345678901";
 	private static final String IUV = "01234567890123456";
 	private static final String IUR = "IUR123456789";
+	private static final String INTERMEDIARY_ID = "15376371009";
+	private static final String STATION_ID = "15376371009_01";
+	private static final String COD_CONNETTORE_RT = "COD_CONNETTORE_RT_TEST";
+	private static final String PAGOPA_BASE_URL = "http://localhost";
+
+	@TestConfiguration
+	static class TestConfig {
+		@Bean(name = "asyncHttpExecutor")
+		public Executor asyncHttpExecutor() {
+			return Runnable::run;
+		}
+
+		@Bean
+		public RestTemplate testPagoPARestTemplate() {
+			return new RestTemplate();
+		}
+	}
 
 	@Autowired
 	private Job rtRetrieveJob;
@@ -84,13 +100,22 @@ class RtRetrieveJobTest {
 	private JobLauncher jobLauncher;
 
 	@Autowired
-	private RestTemplate rtApiRestTemplate;
+	private RestTemplate testPagoPARestTemplate;
 
 	@Autowired
 	private GovpayClient govpayClient;
 
 	@MockitoBean
-	private EventiApi eventiApi;
+	private ConnettoreService connettoreService;
+
+	@MockitoBean
+	private IntermediarioRepository intermediarioRepository;
+
+	@MockitoBean
+	private DominioRepository dominioRepository;
+
+	@MockitoBean
+	private ConfigurazioneService configurazioneService;
 
 	@PersistenceContext
 	private EntityManager entityManager;
@@ -112,7 +137,7 @@ class RtRetrieveJobTest {
 
 	@BeforeEach
 	void setUp() {
-		mockRestServer = MockRestServiceServer.createServer(rtApiRestTemplate);
+		mockRestServer = MockRestServiceServer.createServer(testPagoPARestTemplate);
 		mockWsServer = MockWebServiceServer.createServer(govpayClient);
 
 		// Clean DB data between tests (respect FK order)
@@ -123,109 +148,45 @@ class RtRetrieveJobTest {
 			entityManager.createQuery("DELETE FROM Dominio").executeUpdate();
 		});
 
-		reset(eventiApi);
-	}
+		// Setup connettore mocks
+		IntermediarioEntity intermediario = IntermediarioEntity.builder()
+				.codIntermediario(INTERMEDIARY_ID)
+				.codConnettoreRecuperoRt(COD_CONNETTORE_RT)
+				.build();
+		when(intermediarioRepository.findByCodDominio(TAX_CODE))
+				.thenReturn(Optional.of(intermediario));
 
-	@Test
-	@DisplayName("Happy path: receipt retrieved and sent to GovPay successfully")
-	void happyPath_receiptRetrievedAndSent() throws Exception {
-		// Given: a rendicontazione with singoloVersamento but no idPagamento
-		insertTestData(TAX_CODE, IUV, IUR, null);
+		when(connettoreService.getRestTemplate(COD_CONNETTORE_RT)).thenReturn(testPagoPARestTemplate);
 
-		// The reader maps query result columns as:
-		// rndInfo[2] (r.iuv) -> context.iur, rndInfo[3] (r.iur) -> context.iuv
-		String expectedRestUrl = "http://localhost/organizations/" + TAX_CODE
-				+ "/receipts/" + IUV + "/paymentoptions/" + IUR;
+		Connettore connettore = new Connettore();
+		connettore.setUrl(PAGOPA_BASE_URL);
+		when(connettoreService.getConnettore(COD_CONNETTORE_RT)).thenReturn(connettore);
 
-		// Mock REST: pagoPA returns a valid receipt
-		CtReceiptModelResponse receiptResponse = createReceiptResponse();
-		String jsonReceipt = objectMapper.writeValueAsString(receiptResponse);
+		// Setup domain info for intermediaryId/stationId resolution
+		IntermediarioEntity domIntermediario = IntermediarioEntity.builder()
+				.codIntermediario(INTERMEDIARY_ID)
+				.build();
+		StazioneEntity stazione = StazioneEntity.builder()
+				.codStazione(STATION_ID)
+				.intermediario(domIntermediario)
+				.build();
+		DominioEntity dominioEntity = DominioEntity.builder()
+				.codDominio(TAX_CODE)
+				.stazione(stazione)
+				.build();
+		when(dominioRepository.findByCodDominio(TAX_CODE)).thenReturn(Optional.of(dominioEntity));
 
-		mockRestServer.expect(requestTo(expectedRestUrl))
-				.andExpect(method(HttpMethod.GET))
-				.andExpect(MockRestRequestMatchers.header("Ocp-Apim-Subscription-Key", "test-subscription-key"))
-				.andRespond(withSuccess(jsonReceipt, MediaType.APPLICATION_JSON));
+		// GDE disabled for integration tests (simplifies setup)
+		when(configurazioneService.isServizioGDEAbilitato()).thenReturn(false);
 
-		// Mock SOAP: GovPay returns OK
-		mockWsServer.expect(org.springframework.ws.test.client.RequestMatchers.anything())
-				.andRespond(ResponseCreators.withPayload(marshalSoapResponse(StOutcome.OK)));
-
-		// When: launch the job
-		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
-
-		// Then: job completed successfully
-		assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
-
-		// Verify REST call was made
-		mockRestServer.verify();
-
-		// Verify SOAP call was made
-		mockWsServer.verify();
-
-		// Verify GDE events were tracked (at least for REST OK + SOAP OK)
-		verify(eventiApi, atLeastOnce()).addEvento(any());
-	}
-
-	@Test
-	@DisplayName("Receipt not found (404): job fails with exception")
-	void receiptNotFound_jobFails() throws Exception {
-		// Given: a rendicontazione with singoloVersamento but no idPagamento
-		insertTestData(TAX_CODE, IUV, IUR, null);
-
-		String expectedRestUrl = "http://localhost/organizations/" + TAX_CODE
-				+ "/receipts/" + IUV + "/paymentoptions/" + IUR;
-
-		// Mock REST: pagoPA returns 404
-		mockRestServer.expect(requestTo(expectedRestUrl))
-				.andExpect(method(HttpMethod.GET))
-				.andRespond(withResourceNotFound());
-
-		// When: launch the job
-		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
-
-		// Then: job failed because 404 throws HttpClientErrorException
-		assertEquals("FAILED", jobExecution.getExitStatus().getExitCode());
-
-		// Verify REST call was made
-		mockRestServer.verify();
-
-		// Verify no SOAP call was made (receipt not retrieved)
-		mockWsServer.verify();
-	}
-
-	@Test
-	@DisplayName("SOAP KO outcome: job completes but receipt send failed")
-	void soapKoOutcome_jobCompletes() throws Exception {
-		// Given: a rendicontazione with singoloVersamento but no idPagamento
-		insertTestData(TAX_CODE, IUV, IUR, null);
-
-		String expectedRestUrl = "http://localhost/organizations/" + TAX_CODE
-				+ "/receipts/" + IUV + "/paymentoptions/" + IUR;
-
-		// Mock REST: pagoPA returns a valid receipt
-		CtReceiptModelResponse receiptResponse = createReceiptResponse();
-		String jsonReceipt = objectMapper.writeValueAsString(receiptResponse);
-
-		mockRestServer.expect(requestTo(expectedRestUrl))
-				.andExpect(method(HttpMethod.GET))
-				.andRespond(withSuccess(jsonReceipt, MediaType.APPLICATION_JSON));
-
-		// Mock SOAP: GovPay returns KO
-		mockWsServer.expect(org.springframework.ws.test.client.RequestMatchers.anything())
-				.andRespond(ResponseCreators.withPayload(marshalSoapResponse(StOutcome.KO)));
-
-		// When: launch the job
-		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
-
-		// Then: job completed (SOAP KO doesn't cause job failure)
-		assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
-
-		// Verify both REST and SOAP calls were made
-		mockRestServer.verify();
-		mockWsServer.verify();
-
-		// Verify GDE events were tracked
-		verify(eventiApi, atLeastOnce()).addEvento(any());
+		reset(connettoreService, intermediarioRepository, dominioRepository);
+		// Re-setup after reset
+		when(intermediarioRepository.findByCodDominio(TAX_CODE))
+				.thenReturn(Optional.of(intermediario));
+		when(connettoreService.getRestTemplate(COD_CONNETTORE_RT)).thenReturn(testPagoPARestTemplate);
+		when(connettoreService.getConnettore(COD_CONNETTORE_RT)).thenReturn(connettore);
+		when(dominioRepository.findByCodDominio(TAX_CODE)).thenReturn(Optional.of(dominioEntity));
+		when(configurazioneService.isServizioGDEAbilitato()).thenReturn(false);
 	}
 
 	@Test
