@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.listener.BatchExecutionRecapListener;
@@ -44,7 +45,7 @@ public class BatchJobConfiguration {
         WatermarkBootstrapListener bootstrap,
         BatchExecutionRecapListener batchExecutionRecapListener
     ) {
-        return new JobBuilder("rtRetrieveJob", jobRepository)
+        return new JobBuilder(Costanti.RT_RETRIEVE_JOB_NAME, jobRepository)
             .incrementer(new RunIdIncrementer())
             .listener(bootstrap)
             .listener(batchExecutionRecapListener)

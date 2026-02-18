@@ -25,6 +25,9 @@ public class Costanti {
     // Operazione SOAP per invio ricevuta a GovPay
     public static final String OPERATION_SEND_RECEIPT = "paSendRTV2";
 
+    // Nome job RT retrieve
+    public static final String RT_RETRIEVE_JOB_NAME = "rtRetrieveJob";
+
     private Costanti() {
         // Costruttore privato per evitare istanziazione
     }
