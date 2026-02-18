@@ -1,20 +1,11 @@
 package it.govpay.rt.batch.integration;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-
-import javax.xml.transform.Source;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,23 +20,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.ws.test.client.MockWebServiceServer;
-import org.springframework.ws.test.client.ResponseCreators;
-import org.springframework.xml.transform.StringSource;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
-import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
 import it.govpay.common.client.model.Connettore;
 import it.govpay.common.client.service.ConnettoreService;
 import it.govpay.common.configurazione.service.ConfigurazioneService;
@@ -55,16 +36,8 @@ import it.govpay.common.entity.StazioneEntity;
 import it.govpay.common.repository.DominioRepository;
 import it.govpay.common.repository.IntermediarioRepository;
 import it.govpay.rt.batch.client.GovpayClient;
-import it.govpay.rt.batch.entity.Dominio;
-import it.govpay.rt.batch.entity.Fr;
-import it.govpay.rt.batch.entity.Rendicontazione;
-import it.govpay.rt.batch.entity.SingoloVersamento;
-import it.govpay.rt.batch.repository.RendicontazioniRepository;
-import it.govpay.rt.client.model.CtReceiptModelResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.xml.bind.JAXBElement;
-import javax.xml.namespace.QName;
 
 @SpringBootTest
 @ActiveProfiles("integration-e2e")
@@ -73,8 +46,6 @@ import javax.xml.namespace.QName;
 class RtRetrieveJobTest {
 
 	private static final String TAX_CODE = "12345678901";
-	private static final String IUV = "01234567890123456";
-	private static final String IUR = "IUR123456789";
 	private static final String INTERMEDIARY_ID = "15376371009";
 	private static final String STATION_ID = "15376371009_01";
 	private static final String COD_CONNETTORE_RT = "COD_CONNETTORE_RT_TEST";
@@ -121,16 +92,7 @@ class RtRetrieveJobTest {
 	private EntityManager entityManager;
 
 	@Autowired
-	private RendicontazioniRepository rendicontazioniRepository;
-
-	@Autowired
-	private ObjectMapper objectMapper;
-
-	@Autowired
 	private TransactionTemplate transactionTemplate;
-
-	@Autowired
-	private Jaxb2Marshaller marshaller;
 
 	private MockRestServiceServer mockRestServer;
 	private MockWebServiceServer mockWsServer;
@@ -203,69 +165,6 @@ class RtRetrieveJobTest {
 		// Verify no REST or SOAP calls were made
 		mockRestServer.verify();
 		mockWsServer.verify();
-	}
-
-	private void insertTestData(String taxCode, String iuv, String iur, Long idPagamento) {
-		transactionTemplate.executeWithoutResult(status -> {
-			Dominio dominio = Dominio.builder().codDominio(taxCode).build();
-			entityManager.persist(dominio);
-
-			Fr fr = Fr.builder().dominio(dominio).build();
-			entityManager.persist(fr);
-
-			SingoloVersamento sv = SingoloVersamento.builder().build();
-			entityManager.persist(sv);
-
-			Rendicontazione rnd = Rendicontazione.builder()
-					.fr(fr)
-					.singoloVersamento(sv)
-					.iuv(iuv)
-					.iur(iur)
-					.data(LocalDateTime.now())
-					.idPagamento(idPagamento)
-					.eseguiRecuperoRt(true)
-					.build();
-			entityManager.persist(rnd);
-		});
-	}
-
-	private CtReceiptModelResponse createReceiptResponse() {
-		CtReceiptModelResponse r = new CtReceiptModelResponse();
-		r.setReceiptId("receipt-123");
-		r.setNoticeNumber("302000000000000001");
-		r.setFiscalCode(TAX_CODE);
-		r.setOutcome("OK");
-		r.setCreditorReferenceId(IUV);
-		r.setPaymentAmount(new BigDecimal("100.50"));
-		r.setDescription("Test payment");
-		r.setCompanyName("Test Company");
-		r.setIdPSP("AGID_01");
-		r.setIdChannel("AGID_01_ONUS");
-		r.setPspCompanyName("PSP Company");
-		r.setPaymentMethod("CARD");
-		r.setFee(new BigDecimal("1.50"));
-		r.setPaymentDateTimeFormatted(OffsetDateTime.of(2024, 1, 15, 10, 30, 0, 0, ZoneOffset.UTC));
-		r.setApplicationDate(LocalDate.of(2024, 1, 15));
-		r.setTransferDate(LocalDate.of(2024, 1, 16));
-		return r;
-	}
-
-	private Source marshalSoapResponse(StOutcome outcome) {
-		PaSendRTV2Response response = new PaSendRTV2Response();
-		response.setOutcome(outcome);
-
-		java.io.StringWriter sw = new java.io.StringWriter();
-		try {
-			marshaller.createMarshaller().marshal(
-					new JAXBElement<>(
-							new QName("http://pagopa-api.pagopa.gov.it/pa/paForNode.xsd", "paSendRTV2Response"),
-							PaSendRTV2Response.class,
-							response),
-					new javax.xml.transform.stream.StreamResult(sw));
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to marshal SOAP response", e);
-		}
-		return new StringSource(sw.toString());
 	}
 
 	private org.springframework.batch.core.JobParameters uniqueJobParameters() {
