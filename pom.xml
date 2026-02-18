@@ -6,9 +6,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.7</version>
+        <groupId>org.gov4j.govpay</groupId>
+        <artifactId>govpay-bom</artifactId>
+        <version>1.1.1</version>
         <relativePath/>
     </parent>
 
@@ -25,23 +25,33 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <hibernate.version>6.6.4.Final</hibernate.version>
-        <log4j2.version>2.25.3</log4j2.version>
-
-        <!-- Code Coverage -->
-        <jacoco.version>0.8.13</jacoco.version>
 
         <!-- OWASP Dependency Check -->
         <owasp.falsePositives.dir>src/main/resources/owasp/falsePositives</owasp.falsePositives.dir>
         <owasp>verify</owasp> <!-- owasp phase, use 'none' for disable -->
-        <owasp.plugin.version>12.1.9</owasp.plugin.version>
         <owasp.plugin.autoUpdate>true</owasp.plugin.autoUpdate>
         <owasp.plugin.failBuildOnCVSS>11</owasp.plugin.failBuildOnCVSS>
         <owasp.ossindex.prevents429.sleep>5</owasp.ossindex.prevents429.sleep> <!-- https://github.com/sonatype/ossindex-maven/issues/17 -->
 
         <!-- SonarCloud -->
         <sonar.coverage.exclusions>**/test/**,**/*Test*.java</sonar.coverage.exclusions>
+
+        <!-- govpay-common -->
+        <govpay-common.version>1.0.0-SNAPSHOT</govpay-common.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <profiles>
         <profile>
@@ -102,6 +112,23 @@
             <artifactId>spring-boot-starter-batch</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web-services</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Spring Boot Starter for Web (REST client) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
         <!-- Spring Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -123,10 +150,22 @@
 
         <!-- Hibernate JPA Metamodel Generator -->
         <dependency>
-            <groupId>org.hibernate</groupId>
+            <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-jpamodelgen</artifactId>
-            <version>${hibernate.version}</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- govpay-common shared infrastructure -->
+        <dependency>
+            <groupId>org.gov4j.govpay</groupId>
+            <artifactId>govpay-common</artifactId>
+            <version>${govpay-common.version}</version>
         </dependency>
 
         <!-- Testing -->
@@ -138,6 +177,21 @@
         <dependency>
             <groupId>org.springframework.batch</groupId>
             <artifactId>spring-batch-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ws</groupId>
+            <artifactId>spring-ws-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -160,7 +214,7 @@
                     <target>${java.version}</target>
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>org.hibernate</groupId>
+                            <groupId>org.hibernate.orm</groupId>
                             <artifactId>hibernate-jpamodelgen</artifactId>
                             <version>${hibernate.version}</version>
                         </path>
@@ -172,6 +226,66 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- tag::xsd[] -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jaxb2-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>xjc</id>
+                        <goals>
+                            <goal>xjc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <xjbSources>
+                        <xjbSource>${project.basedir}/src/main/resources/xsd/bindings.xjb</xjbSource>
+                    </xjbSources>
+                    <sources>
+                        <source>${project.basedir}/src/main/resources/xsd/paForNode.xsd</source>
+                    </sources>
+                </configuration>
+            </plugin>
+            <!-- end::xsd[] -->
+
+            <!-- tag::yaml -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi.tool.codegen.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-rt-organization-client</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/bizEvents.yaml</inputSpec>
+                            <generatorName>java</generatorName>
+                            <library>resttemplate</library>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <apiPackage>it.govpay.rt.client.api</apiPackage>
+                            <modelPackage>it.govpay.rt.client.model</modelPackage>
+                            <invokerPackage>it.govpay.rt.client</invokerPackage>
+                            <configOptions>
+                                <dateLibrary>java8</dateLibrary>
+                                <sourceFolder>src/gen/java/main</sourceFolder>
+                                <useJakartaEe>true</useJakartaEe>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+                                <useBeanValidation>false</useBeanValidation>
+                                <performBeanValidation>false</performBeanValidation>
+                                <serializableModel>true</serializableModel>
+                                <openApiNullable>false</openApiNullable>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- end::yaml -->
 
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -190,7 +304,6 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -218,7 +331,6 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>${owasp.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>check-owasp</id>

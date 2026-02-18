@@ -1,3 +1,37 @@
+2025-02-17  Giuliano Pintori <pintori@link.it>
+
+	* [Refactoring]
+	Migrazione a govpay-common
+	Integrazione della libreria condivisa govpay-common per allineare govpay-rt-batch
+	allo stesso pattern infrastrutturale di govpay-fdr-batch.
+	Principali modifiche:
+	- GdeService: estende AbstractGdeService (govpay-common), rimosso client GDE
+	  generato da OpenAPI, invio eventi via RestTemplate da ConfigurazioneService
+	- RtApiService: usa ConnettoreService per creare RestTemplate per-dominio,
+	  risolve intermediaryId/stationId da DB (DominioEntity -> StazioneEntity -> IntermediarioEntity)
+	- GdeUtils rinominato in RtGdeUtils: mantiene solo serializzazione SOAP,
+	  payload REST e headers delegati a GdeUtils di govpay-common
+	- Rimossi: ResponseBodyHolder, ResponseBodyCapturingInterceptor, AsyncConfiguration,
+	  PagoPAClientConfig, PagoPAProperties, openapi.yaml GDE
+	- RtApiClientConfig semplificato: solo createPagoPAObjectMapper()
+	- Aggiornati import modelli GDE: it.govpay.gde.client.model -> it.govpay.gde.client.beans
+	- Rimossa configurazione pagopa.rt.*, govpay.gde.*, govpay.async.*, nodeforpa.* da properties
+
+2025-02-08  Giuliano Pintori <pintori@link.it>
+
+	* [ProjectSetup]
+	Migrazione parent POM a govpay-bom
+	Sostituito parent spring-boot-starter-parent 3.5.7 con govpay-bom 1.1.1-SNAPSHOT.
+	Aggiornato groupId parent a org.gov4j.govpay.
+	Rimosse versioni esplicite delle dipendenze e dei plugin ora gestite dal BOM:
+	- hibernate-jpamodelgen (corretto groupId a org.hibernate.orm)
+	- jackson-databind-nullable
+	- jacoco-maven-plugin
+	- dependency-check-maven
+	- openapi-generator-maven-plugin (usa ${openapi.tool.codegen.version} dal BOM)
+	- jaxb2-maven-plugin
+	Aggiunto repository Maven Central Snapshots per risoluzione artefatti SNAPSHOT.
+
 2025-02-04  Giuliano Pintori <pintori@link.it>
 
 	* [CI/CD]
