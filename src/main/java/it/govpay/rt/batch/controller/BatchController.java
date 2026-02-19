@@ -19,6 +19,7 @@ import it.govpay.common.batch.dto.LastExecutionInfo;
 import it.govpay.common.batch.dto.NextExecutionInfo;
 import it.govpay.common.batch.runner.JobExecutionHelper;
 import it.govpay.rt.batch.Costanti;
+import it.govpay.rt.batch.service.RtApiService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -30,16 +31,19 @@ import lombok.extern.slf4j.Slf4j;
 public class BatchController extends AbstractBatchController {
 
     private final Job rtRetrieveJob;
+    private final RtApiService rtApiService;
 
     public BatchController(
             JobExecutionHelper jobExecutionHelper,
             JobExplorer jobExplorer,
             @Qualifier("rtRetrieveJob") Job rtRetrieveJob,
+            RtApiService rtApiService,
             Environment environment,
             ZoneId applicationZoneId,
             @Value("${scheduler.rtRetrieveJob.fixedDelayString:7200000}") long schedulerIntervalMillis) {
         super(jobExecutionHelper, jobExplorer, environment, applicationZoneId, schedulerIntervalMillis);
         this.rtRetrieveJob = rtRetrieveJob;
+        this.rtApiService = rtApiService;
     }
 
     @Override
@@ -50,6 +54,12 @@ public class BatchController extends AbstractBatchController {
     @Override
     protected String getJobName() {
         return Costanti.RT_RETRIEVE_JOB_NAME;
+    }
+
+    @Override
+    protected ResponseEntity<String> clearCache() {
+        rtApiService.clearCache();
+        return ResponseEntity.ok("Cache connettori svuotata");
     }
 
     @GetMapping("/eseguiJob")

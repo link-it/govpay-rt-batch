@@ -1,3 +1,28 @@
+2025-02-19  Giuliano Pintori <pintori@link.it>
+
+	* [Enhancement]
+	Controller per il monitoraggio del batch
+	Aggiunti endpoint REST per esecuzione manuale e monitoraggio del job batch,
+	seguendo il pattern di govpay-fdr-batch con AbstractBatchController (govpay-common).
+	- BatchController: endpoint /api/batch/eseguiJob, /status, /lastExecution, /nextExecution
+	- Supporto force execution, gestione job stale, HTTP 409 Conflict se gia' in esecuzione
+	- Endpoint clearCache per reset cache connettori RT
+	- ScheduledJobRunner: esecuzione periodica con fixedDelay (profilo default)
+	- CronJobRunner: esecuzione tramite cron esterno (profilo cron)
+	- BatchInfraConfig: bean JobConcurrencyService e JobExecutionHelper
+	- TimezoneConfig: bean ZoneId per infrastruttura batch
+
+	* [Fix]
+	Tipo evento GDE per GET Receipt
+	Corretto il campo tipoEvento per la chiamata GET Receipt: usa l'operationId
+	OpenAPI "getOrganizationReceiptIuvIur" invece del path template.
+
+	* [Build]
+	Aggiornamento parent POM e packaging
+	- Aggiornato govpay-bom a 1.1.2-SNAPSHOT
+	- Aggiunto goal repackage allo spring-boot-maven-plugin per generazione JAR eseguibile
+	- Aggiunta eccezione licenza GPLv3 per govpay-common nella pipeline CI
+
 2025-02-17  Giuliano Pintori <pintori@link.it>
 
 	* [Refactoring]

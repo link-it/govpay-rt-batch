@@ -180,6 +180,15 @@ public class RtApiService {
 	}
 
 	/**
+	 * Svuota la cache delle istanze API per forzare la ricreazione al prossimo utilizzo.
+	 */
+	public void clearCache() {
+		apiCache.clear();
+		connettoreService.clearCache();
+		log.info("Cache connettori RT svuotata");
+	}
+
+	/**
 	 * Helper record to hold intermediary/station info resolved from DB.
 	 */
 	private record DomainInfo(String intermediaryId, String stationId) {}

@@ -41,6 +41,7 @@ import it.govpay.common.batch.dto.Problem;
 import it.govpay.common.batch.runner.JobExecutionHelper;
 import it.govpay.common.batch.service.JobConcurrencyService;
 import it.govpay.rt.batch.Costanti;
+import it.govpay.rt.batch.service.RtApiService;
 
 class BatchControllerTest {
 
@@ -59,6 +60,9 @@ class BatchControllerTest {
     @Mock
     private Environment environment;
 
+    @Mock
+    private RtApiService rtApiService;
+
     private BatchController batchController;
 
     private static final String CLUSTER_ID = "TestCluster";
@@ -70,7 +74,7 @@ class BatchControllerTest {
         MockitoAnnotations.openMocks(this);
         when(jobExecutionHelper.getJobConcurrencyService()).thenReturn(jobConcurrencyService);
         batchController = new BatchController(jobExecutionHelper, jobExplorer, rtRetrieveJob,
-                environment, ZONE_ID, SCHEDULER_INTERVAL_MILLIS);
+                rtApiService, environment, ZONE_ID, SCHEDULER_INTERVAL_MILLIS);
     }
 
     private JobExecution createJobExecution(String clusterId, BatchStatus status) {
