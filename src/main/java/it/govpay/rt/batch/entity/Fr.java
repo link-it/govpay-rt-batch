@@ -1,5 +1,6 @@
 package it.govpay.rt.batch.entity;
 
+import it.govpay.common.entity.DominioEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,5 +25,5 @@ public class Fr {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_dominio", nullable = false)
-    private Dominio dominio;
+    private DominioEntity dominio;
 }

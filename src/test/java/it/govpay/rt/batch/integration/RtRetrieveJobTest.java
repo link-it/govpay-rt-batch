@@ -107,7 +107,7 @@ class RtRetrieveJobTest {
 			entityManager.createQuery("DELETE FROM Rendicontazione").executeUpdate();
 			entityManager.createQuery("DELETE FROM Fr").executeUpdate();
 			entityManager.createQuery("DELETE FROM SingoloVersamento").executeUpdate();
-			entityManager.createQuery("DELETE FROM Dominio").executeUpdate();
+			entityManager.createQuery("DELETE FROM DominioEntity").executeUpdate();
 		});
 
 		// Setup connettore mocks

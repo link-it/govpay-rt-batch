@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import it.govpay.rt.batch.entity.Dominio;
+import it.govpay.common.entity.DominioEntity;
 import it.govpay.rt.batch.entity.Fr;
 import it.govpay.rt.batch.entity.Rendicontazione;
 import it.govpay.rt.batch.entity.SingoloVersamento;
@@ -80,7 +80,8 @@ class RendicontazioniRepositoryTest {
     @DisplayName("should not find rendicontazione without singoloVersamento")
     void shouldNotFindRendicontazioneWithoutSingoloVersamento() {
         // Given: a rendicontazione WITHOUT singoloVersamento
-        Dominio dominio = Dominio.builder().codDominio(TAX_CODE).build();
+        DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
         entityManager.persist(dominio);
 
         Fr fr = Fr.builder().dominio(dominio).build();
@@ -131,7 +132,8 @@ class RendicontazioniRepositoryTest {
     @DisplayName("should not find rendicontazione older than data limite")
     void shouldNotFindRendicontazioneOlderThanDataLimite() {
         // Given: a rendicontazione older than data limite
-        Dominio dominio = Dominio.builder().codDominio(TAX_CODE).build();
+        DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
         entityManager.persist(dominio);
 
         Fr fr = Fr.builder().dominio(dominio).build();
@@ -187,7 +189,8 @@ class RendicontazioniRepositoryTest {
     @DisplayName("should not find rendicontazione with eseguiRecuperoRt false")
     void shouldNotFindRendicontazioneWithEseguiRecuperoRtFalse() {
         // Given: a rendicontazione with eseguiRecuperoRt = false
-        Dominio dominio = Dominio.builder().codDominio(TAX_CODE).build();
+        DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
         entityManager.persist(dominio);
 
         Fr fr = Fr.builder().dominio(dominio).build();
@@ -239,7 +242,8 @@ class RendicontazioniRepositoryTest {
     }
 
     private Rendicontazione createTestData(String taxCode, String iuv, String iur, Long idPagamento) {
-        Dominio dominio = Dominio.builder().codDominio(taxCode).build();
+        DominioEntity dominio = DominioEntity.builder().codDominio(taxCode)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
         entityManager.persist(dominio);
 
         Fr fr = Fr.builder().dominio(dominio).build();
