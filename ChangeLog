@@ -1,10 +1,22 @@
+2025-02-20  Giuliano Pintori <pintori@link.it>
+
+	* [Refactoring]
+	Integrazione component scan govpay-common
+	- Aggiunto scanBasePackages, @EntityScan e @EnableJpaRepositories per
+	  includere i package di govpay-common (ConnettoreService, ConfigurazioneService,
+	  repository e entita' condivise)
+	- Eliminata entita' locale Dominio, sostituita con DominioEntity di govpay-common
+	- Aggiornato entrypoint Docker: rimossa configurazione RT API e GDE da variabili
+	  ambiente (ora lette dal DB tramite tabelle CONNETTORI e CONFIGURAZIONE)
+	- Corretta variabile scheduler entrypoint: SCHEDULER_RTRETRIEVEJOB_FIXEDDELAYSTRING
+
 2025-02-19  Giuliano Pintori <pintori@link.it>
 
 	* [Enhancement]
 	Controller per il monitoraggio del batch
 	Aggiunti endpoint REST per esecuzione manuale e monitoraggio del job batch,
 	seguendo il pattern di govpay-fdr-batch con AbstractBatchController (govpay-common).
-	- BatchController: endpoint /api/batch/eseguiJob, /status, /lastExecution, /nextExecution
+	- BatchController: endpoint /api/batch/run, /status, /lastExecution, /nextExecution
 	- Supporto force execution, gestione job stale, HTTP 409 Conflict se gia' in esecuzione
 	- Endpoint clearCache per reset cache connettori RT
 	- ScheduledJobRunner: esecuzione periodica con fixedDelay (profilo default)
