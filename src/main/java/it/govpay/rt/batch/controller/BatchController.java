@@ -62,7 +62,7 @@ public class BatchController extends AbstractBatchController {
         return ResponseEntity.ok("Cache connettori svuotata");
     }
 
-    @GetMapping("/eseguiJob")
+    @GetMapping("/run")
     public ResponseEntity<Object> eseguiJobEndpoint(
             @RequestParam(name = "force", required = false, defaultValue = "false") boolean force) {
         return eseguiJob(force);
