@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication(scanBasePackages = {"it.govpay.rt.batch", "it.govpay.common.client"})
 @EntityScan(basePackages = {"it.govpay.rt.batch", "it.govpay.common.client", "it.govpay.common.entity"})
-@EnableJpaRepositories(basePackages = {"it.govpay.rt.batch", "it.govpay.common.repository"})
+@EnableJpaRepositories(basePackages = {"it.govpay.rt.batch"})
 @EnableScheduling
 public class GovpayRtBatchApplication {
 
