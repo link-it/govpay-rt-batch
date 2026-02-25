@@ -1,7 +1,7 @@
 package it.govpay.rt.batch.gde.service;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -23,8 +23,10 @@ import it.govpay.common.configurazione.service.ConfigurazioneService;
 import it.govpay.common.gde.AbstractGdeService;
 import it.govpay.common.gde.GdeEventInfo;
 import it.govpay.common.gde.GdeUtils;
+import it.govpay.gde.client.beans.Header;
 import it.govpay.gde.client.beans.NuovoEvento;
 import it.govpay.rt.batch.Costanti;
+import it.govpay.rt.batch.client.SoapGdeCapturingInterceptor;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 import it.govpay.rt.batch.gde.utils.RtGdeUtils;
@@ -162,12 +164,14 @@ public class GdeService extends AbstractGdeService {
     public void saveSendReceiptOk(RtRetrieveContext rtInfo, PaSendRTV2Request request, PaSendRTV2Response response,
                                   OffsetDateTime dataStart, OffsetDateTime dataEnd) {
         String transactionId = UUID.randomUUID().toString();
+        List<Header> soapRequestHeaders = buildSoapRequestHeaders();
+        List<Header> soapResponseHeaders = SoapGdeCapturingInterceptor.getCapturedResponseHeaders();
 
         NuovoEvento nuovoEvento = eventoRtMapper.createEventoOk(
                 rtInfo, Costanti.OPERATION_SEND_RECEIPT, transactionId, dataStart, dataEnd);
 
-        eventoRtMapper.setParametriRichiesta(nuovoEvento, govpayUrl, "POST", Collections.emptyList());
-        eventoRtMapper.setParametriRispostaSoap(nuovoEvento, dataEnd, response);
+        eventoRtMapper.setParametriRichiesta(nuovoEvento, govpayUrl, "POST", soapRequestHeaders);
+        eventoRtMapper.setParametriRispostaSoap(nuovoEvento, dataEnd, response, soapResponseHeaders);
 
         RtGdeUtils.serializzaPayloadSoap(this.jaxb2Marshaller, nuovoEvento, request, response, null);
 
@@ -186,12 +190,14 @@ public class GdeService extends AbstractGdeService {
     public void saveSendReceiptKo(RtRetrieveContext rtInfo, PaSendRTV2Request request, Exception exception,
                                   OffsetDateTime dataStart, OffsetDateTime dataEnd) {
         String transactionId = UUID.randomUUID().toString();
+        List<Header> soapRequestHeaders = buildSoapRequestHeaders();
+        List<Header> soapResponseHeaders = SoapGdeCapturingInterceptor.getCapturedResponseHeaders();
 
         NuovoEvento nuovoEvento = eventoRtMapper.createEventoKoSoap(
                 rtInfo, Costanti.OPERATION_SEND_RECEIPT, transactionId, dataStart, dataEnd, exception);
 
-        eventoRtMapper.setParametriRichiesta(nuovoEvento, govpayUrl, "POST", Collections.emptyList());
-        eventoRtMapper.setParametriRispostaSoapKo(nuovoEvento, dataEnd, exception);
+        eventoRtMapper.setParametriRichiesta(nuovoEvento, govpayUrl, "POST", soapRequestHeaders);
+        eventoRtMapper.setParametriRispostaSoapKo(nuovoEvento, dataEnd, exception, soapResponseHeaders);
 
         RtGdeUtils.serializzaPayloadSoap(this.jaxb2Marshaller, nuovoEvento, request, null, exception);
 
@@ -207,6 +213,22 @@ public class GdeService extends AbstractGdeService {
             nuovoEvento.getParametriRisposta().setPayload(
                 extractResponsePayload(responseEntity, exception));
         }
+    }
+
+    /**
+     * Builds standard SOAP request headers (Content-Type, SOAPAction).
+     */
+    private List<Header> buildSoapRequestHeaders() {
+        List<Header> headers = new java.util.ArrayList<>();
+        Header contentType = new Header();
+        contentType.setNome("Content-Type");
+        contentType.setValore("text/xml; charset=utf-8");
+        headers.add(contentType);
+        Header soapAction = new Header();
+        soapAction.setNome("SOAPAction");
+        soapAction.setValore(Costanti.OPERATION_SEND_RECEIPT);
+        headers.add(soapAction);
+        return headers;
     }
 
     /**

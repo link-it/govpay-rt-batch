@@ -12,12 +12,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
+import org.springframework.ws.client.WebServiceTransportException;
 import org.springframework.ws.soap.client.SoapFaultClientException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Mapper for creating GDE events from FDR batch operations.
@@ -28,6 +31,8 @@ import java.util.List;
 @Slf4j
 @Component
 public class EventoRtMapper {
+
+    private static final Pattern HTTP_STATUS_PATTERN = Pattern.compile("\\[(\\d{3})\\]");
 
     @Value("${govpay.batch.cluster-id}")
     private String clusterId;
@@ -41,6 +46,8 @@ public class EventoRtMapper {
     private DatiPagoPA createDatiPagoPA(RtRetrieveContext rtInfo) {
         DatiPagoPA datiPagoPA = new DatiPagoPA();
         datiPagoPA.setIdDominio(rtInfo.getTaxCode());
+        datiPagoPA.setIdIntermediario(rtInfo.getIdIntermediario());
+        datiPagoPA.setIdStazione(rtInfo.getIdStazione());
         return datiPagoPA;
     }   
 
@@ -60,6 +67,8 @@ public class EventoRtMapper {
 
         if (rtInfo != null) {
         	nuovoEvento.setIdDominio(rtInfo.getTaxCode());
+        	nuovoEvento.setIuv(rtInfo.getIuv());
+        	nuovoEvento.setCcp(rtInfo.getIur());
         	nuovoEvento.setDatiPagoPA(createDatiPagoPA(rtInfo));
         }
 
@@ -67,7 +76,7 @@ public class EventoRtMapper {
         nuovoEvento.setCategoriaEvento(CategoriaEvento.INTERFACCIA);
         nuovoEvento.setClusterId(clusterId);
         nuovoEvento.setDataEvento(dataStart);
-        nuovoEvento.setDurataEvento(dataEnd.toEpochSecond() - dataStart.toEpochSecond());
+        nuovoEvento.setDurataEvento(dataEnd.toInstant().toEpochMilli() - dataStart.toInstant().toEpochMilli());
         nuovoEvento.setRuolo(RuoloEvento.CLIENT);
         nuovoEvento.setComponente(ComponenteEvento.API_PAGOPA);
         nuovoEvento.setTipoEvento(tipoEvento);
@@ -206,10 +215,11 @@ public class EventoRtMapper {
      * @param dataEnd          Response timestamp
      * @param response         SOAP response
      */
-    public void setParametriRispostaSoap(NuovoEvento nuovoEvento, OffsetDateTime dataEnd, PaSendRTV2Response response) {
+    public void setParametriRispostaSoap(NuovoEvento nuovoEvento, OffsetDateTime dataEnd,
+                                          PaSendRTV2Response response, List<Header> responseHeaders) {
         DettaglioRisposta dettaglioRisposta = new DettaglioRisposta();
         dettaglioRisposta.setDataOraRisposta(dataEnd);
-        dettaglioRisposta.setHeaders(new ArrayList<>());
+        dettaglioRisposta.setHeaders(responseHeaders != null ? responseHeaders : new ArrayList<>());
 
         if (response != null && response.getOutcome() == StOutcome.OK) {
             dettaglioRisposta.setStatus(BigDecimal.valueOf(200));
@@ -227,11 +237,16 @@ public class EventoRtMapper {
      * @param dataEnd          Response timestamp
      * @param exception        Exception
      */
-    public void setParametriRispostaSoapKo(NuovoEvento nuovoEvento, OffsetDateTime dataEnd, Exception exception) {
+    public void setParametriRispostaSoapKo(NuovoEvento nuovoEvento, OffsetDateTime dataEnd,
+                                            Exception exception, List<Header> responseHeaders) {
         DettaglioRisposta dettaglioRisposta = new DettaglioRisposta();
         dettaglioRisposta.setDataOraRisposta(dataEnd);
-        dettaglioRisposta.setHeaders(new ArrayList<>());
-        dettaglioRisposta.setStatus(BigDecimal.valueOf(500));
+        dettaglioRisposta.setHeaders(responseHeaders != null ? responseHeaders : new ArrayList<>());
+        if (exception instanceof WebServiceTransportException transportException) {
+            dettaglioRisposta.setStatus(BigDecimal.valueOf(extractHttpStatusCode(transportException)));
+        } else {
+            dettaglioRisposta.setStatus(BigDecimal.valueOf(500));
+        }
         nuovoEvento.setParametriRisposta(dettaglioRisposta);
     }
 
@@ -246,6 +261,11 @@ public class EventoRtMapper {
             nuovoEvento.setDettaglioEsito(soapFault.getFaultStringOrReason());
             nuovoEvento.setSottotipoEsito(soapFault.getFaultCode() != null ? soapFault.getFaultCode().toString() : "SOAP_FAULT");
             nuovoEvento.setEsito(EsitoEvento.KO);
+        } else if (exception instanceof WebServiceTransportException transportException) {
+            int statusCode = extractHttpStatusCode(transportException);
+            nuovoEvento.setDettaglioEsito(transportException.getMessage());
+            nuovoEvento.setSottotipoEsito(String.valueOf(statusCode));
+            nuovoEvento.setEsito(statusCode >= 500 ? EsitoEvento.FAIL : EsitoEvento.KO);
         } else if (exception != null) {
             nuovoEvento.setDettaglioEsito(exception.getMessage());
             nuovoEvento.setSottotipoEsito("500");
@@ -260,6 +280,18 @@ public class EventoRtMapper {
      * @param exception      Exception
      * @param nuovoEvento    Event to update
      */
+    /**
+     * Extracts the HTTP status code from a WebServiceTransportException message (e.g., " [401]").
+     * Falls back to 500 if the status code cannot be parsed.
+     */
+    private int extractHttpStatusCode(WebServiceTransportException exception) {
+        Matcher matcher = HTTP_STATUS_PATTERN.matcher(exception.getMessage());
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return 500;
+    }
+
     private void extractExceptionInfo(ResponseEntity<?> responseEntity, RestClientException exception,
                                       NuovoEvento nuovoEvento) {
         if (exception != null) {

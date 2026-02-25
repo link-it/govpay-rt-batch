@@ -15,11 +15,11 @@ public class GovpayClientConfig  {
 	@Value("${govpay.url}")
 	String govpayUrl;
 
-	@Value("${govpay.auth-header.key:GOVHUB-CONSUMER-PRINCIPAL}")
-	String principalHeaderName;
+	@Value("${govpay.auth.username}")
+	String username;
 
-	@Value("${govpay.auth-header.value}")
-	String principalHeaderValue;
+	@Value("${govpay.auth.password}")
+	String password;
 
 	@Bean
 	public Jaxb2Marshaller marshaller() {
@@ -37,7 +37,7 @@ public class GovpayClientConfig  {
 		client.setDefaultUri(govpayUrl);
 		client.setMarshaller(marshaller);
 		client.setUnmarshaller(marshaller);
-		client.setInterceptors(new ClientInterceptor[] { new AuthorizationHeaderInserter(principalHeaderName, principalHeaderValue) });
+		client.setInterceptors(new ClientInterceptor[] { new SoapGdeCapturingInterceptor(), new AuthorizationHeaderInserter(username, password) });
 		return client;
 	}
 }

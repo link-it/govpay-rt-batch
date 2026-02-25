@@ -7,6 +7,9 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
+import it.gov.pagopa.pagopa_api.pa.pafornode.ObjectFactory;
+import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
+import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.govpay.common.gde.GdeUtils;
 import it.govpay.gde.client.beans.NuovoEvento;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RtGdeUtils {
 
+	private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
+
 	private RtGdeUtils () {}
 
 	/**
@@ -32,11 +37,11 @@ public class RtGdeUtils {
 	 * @param e eccezione (può essere null)
 	 */
 	public static void serializzaPayloadSoap(Jaxb2Marshaller marshaller, NuovoEvento nuovoEvento,
-	                                         Object request, Object response, Exception e) {
-		// Serializza la richiesta in XML
+	                                         PaSendRTV2Request request, PaSendRTV2Response response, Exception e) {
+		// Serializza la richiesta in XML wrappando in JAXBElement (manca @XmlRootElement)
 		if (nuovoEvento.getParametriRichiesta() != null && request != null) {
 			nuovoEvento.getParametriRichiesta().setPayload(
-				Base64.getEncoder().encodeToString(marshalToXml(marshaller, request).getBytes()));
+				Base64.getEncoder().encodeToString(marshalToXml(marshaller, OBJECT_FACTORY.createPaSendRTV2Request(request)).getBytes()));
 		}
 
 		// Serializza la risposta in XML
@@ -46,7 +51,7 @@ public class RtGdeUtils {
 					Base64.getEncoder().encodeToString(e.getMessage().getBytes()));
 			} else if (response != null) {
 				nuovoEvento.getParametriRisposta().setPayload(
-					Base64.getEncoder().encodeToString(marshalToXml(marshaller, response).getBytes()));
+					Base64.getEncoder().encodeToString(marshalToXml(marshaller, OBJECT_FACTORY.createPaSendRTV2Response(response)).getBytes()));
 			}
 		}
 	}

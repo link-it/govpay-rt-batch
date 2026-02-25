@@ -206,7 +206,7 @@ class GdeServiceTest {
 
             verify(eventoRtMapper).createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd));
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), eq(GOVPAY_URL), eq("POST"), anyList());
-            verify(eventoRtMapper).setParametriRispostaSoap(eq(mockEvento), eq(dataEnd), eq(response));
+            verify(eventoRtMapper).setParametriRispostaSoap(eq(mockEvento), eq(dataEnd), eq(response), anyList());
             verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }
@@ -234,7 +234,7 @@ class GdeServiceTest {
             verify(eventoRtMapper).createEventoKoSoap(eq(rtInfo), anyString(), anyString(),
                     eq(dataStart), eq(dataEnd), eq(exception));
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), eq(GOVPAY_URL), eq("POST"), anyList());
-            verify(eventoRtMapper).setParametriRispostaSoapKo(eq(mockEvento), eq(dataEnd), eq(exception));
+            verify(eventoRtMapper).setParametriRispostaSoapKo(eq(mockEvento), eq(dataEnd), eq(exception), anyList());
             verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
     }

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,12 +39,14 @@ class AuthorizationHeaderInserterTest {
 
     private AuthorizationHeaderInserter interceptor;
 
-    private static final String HEADER_NAME = "X-Auth-Header";
-    private static final String SUBSCRIPTION_KEY = "test-key-12345";
+    private static final String USERNAME = "admin";
+    private static final String PASSWORD = "secret";
+    private static final String EXPECTED_AUTH_VALUE = "Basic " + Base64.getEncoder()
+            .encodeToString((USERNAME + ":" + PASSWORD).getBytes(StandardCharsets.UTF_8));
 
     @BeforeEach
     void setUp() {
-        interceptor = new AuthorizationHeaderInserter(HEADER_NAME, SUBSCRIPTION_KEY);
+        interceptor = new AuthorizationHeaderInserter(USERNAME, PASSWORD);
     }
 
     @Nested
@@ -50,29 +54,16 @@ class AuthorizationHeaderInserterTest {
     class HandleRequestTest {
 
         @Test
-        @DisplayName("should always return true")
-        void shouldAlwaysReturnTrue() {
-            boolean result = interceptor.handleRequest(messageContext);
-
-            assertTrue(result);
-        }
-    }
-
-    @Nested
-    @DisplayName("handleResponse")
-    class HandleResponseTest {
-
-        @Test
-        @DisplayName("should add header when connection is HeadersAware")
-        void shouldAddHeaderWhenConnectionIsHeadersAware() throws IOException {
+        @DisplayName("should add Basic auth header when connection is HeadersAware")
+        void shouldAddBasicAuthHeader() throws IOException {
             try (MockedStatic<TransportContextHolder> mockedHolder = mockStatic(TransportContextHolder.class)) {
                 mockedHolder.when(TransportContextHolder::getTransportContext).thenReturn(transportContext);
                 when(transportContext.getConnection()).thenReturn(httpConnection);
 
-                boolean result = interceptor.handleResponse(messageContext);
+                boolean result = interceptor.handleRequest(messageContext);
 
                 assertTrue(result);
-                verify(httpConnection).addRequestHeader(HEADER_NAME, SUBSCRIPTION_KEY);
+                verify(httpConnection).addRequestHeader("Authorization", EXPECTED_AUTH_VALUE);
             }
         }
 
@@ -85,10 +76,9 @@ class AuthorizationHeaderInserterTest {
                 mockedHolder.when(TransportContextHolder::getTransportContext).thenReturn(transportContext);
                 when(transportContext.getConnection()).thenReturn(plainConnection);
 
-                boolean result = interceptor.handleResponse(messageContext);
+                boolean result = interceptor.handleRequest(messageContext);
 
                 assertTrue(result);
-                // No header added because connection is not HeadersAware
             }
         }
 
@@ -100,8 +90,21 @@ class AuthorizationHeaderInserterTest {
                 when(transportContext.getConnection()).thenReturn(httpConnection);
                 doThrow(new IOException("Connection error")).when(httpConnection).addRequestHeader(anyString(), anyString());
 
-                assertThrows(WebServiceIOException.class, () -> interceptor.handleResponse(messageContext));
+                assertThrows(WebServiceIOException.class, () -> interceptor.handleRequest(messageContext));
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("handleResponse")
+    class HandleResponseTest {
+
+        @Test
+        @DisplayName("should always return true")
+        void shouldAlwaysReturnTrue() {
+            boolean result = interceptor.handleResponse(messageContext);
+
+            assertTrue(result);
         }
     }
 

@@ -42,6 +42,8 @@ class EventoRtMapperTest {
     private static final String TAX_CODE = "12345678901";
     private static final String IUV = "01234567890123456";
     private static final String IUR = "IUR123456";
+    private static final String ID_INTERMEDIARIO = "11111111111";
+    private static final String ID_STAZIONE = "11111111111_01";
     private static final String TIPO_EVENTO = "GET_RECEIPT";
     private static final String TRANSACTION_ID = "txn-123";
 
@@ -55,6 +57,8 @@ class EventoRtMapperTest {
                 .taxCode(TAX_CODE)
                 .iuv(IUV)
                 .iur(IUR)
+                .idIntermediario(ID_INTERMEDIARIO)
+                .idStazione(ID_STAZIONE)
                 .build();
 
         dataStart = OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC);
@@ -72,10 +76,12 @@ class EventoRtMapperTest {
 
             assertNotNull(evento);
             assertEquals(TAX_CODE, evento.getIdDominio());
+            assertEquals(IUV, evento.getIuv());
+            assertEquals(IUR, evento.getCcp());
             assertEquals(CategoriaEvento.INTERFACCIA, evento.getCategoriaEvento());
             assertEquals(CLUSTER_ID, evento.getClusterId());
             assertEquals(dataStart, evento.getDataEvento());
-            assertEquals(5L, evento.getDurataEvento()); // 5 seconds difference
+            assertEquals(5000L, evento.getDurataEvento()); // 5 seconds = 5000 milliseconds
             assertEquals(RuoloEvento.CLIENT, evento.getRuolo());
             assertEquals(ComponenteEvento.API_PAGOPA, evento.getComponente());
             assertEquals(TIPO_EVENTO, evento.getTipoEvento());
@@ -89,6 +95,8 @@ class EventoRtMapperTest {
 
             assertNotNull(evento.getDatiPagoPA());
             assertEquals(TAX_CODE, evento.getDatiPagoPA().getIdDominio());
+            assertEquals(ID_INTERMEDIARIO, evento.getDatiPagoPA().getIdIntermediario());
+            assertEquals(ID_STAZIONE, evento.getDatiPagoPA().getIdStazione());
         }
 
         @Test
@@ -98,6 +106,8 @@ class EventoRtMapperTest {
 
             assertNotNull(evento);
             assertNull(evento.getIdDominio());
+            assertNull(evento.getIuv());
+            assertNull(evento.getCcp());
             assertNull(evento.getDatiPagoPA());
         }
     }
@@ -233,7 +243,7 @@ class EventoRtMapperTest {
             PaSendRTV2Response response = new PaSendRTV2Response();
             response.setOutcome(StOutcome.OK);
 
-            mapper.setParametriRispostaSoap(evento, dataEnd, response);
+            mapper.setParametriRispostaSoap(evento, dataEnd, response, null);
 
             assertEquals(BigDecimal.valueOf(200), evento.getParametriRisposta().getStatus());
         }
@@ -245,7 +255,7 @@ class EventoRtMapperTest {
             PaSendRTV2Response response = new PaSendRTV2Response();
             response.setOutcome(StOutcome.KO);
 
-            mapper.setParametriRispostaSoap(evento, dataEnd, response);
+            mapper.setParametriRispostaSoap(evento, dataEnd, response, null);
 
             assertEquals(BigDecimal.valueOf(500), evento.getParametriRisposta().getStatus());
         }

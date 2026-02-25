@@ -13,4 +13,6 @@ public class RtRetrieveContext {
     private String taxCode;
     private String iuv;
     private String iur;
+    private String idIntermediario;
+    private String idStazione;
 }

@@ -47,12 +47,12 @@ public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExec
 		                                               : rndRepository.findRendicontazioneWithNoPagamento(dataLimite);
 		log.info("Trovate {} ricevute da recuperare", rndInfos.size());
 		for (Object[] rndInfo : rndInfos) {
-			log.debug("Ricevuta da recuperare id {}, taxCode {}, iur {}, iuv {}", rndInfo[0], rndInfo[1], rndInfo[2], rndInfo[3]);
+			log.debug("Ricevuta da recuperare id {}, taxCode {}, iuv {}, iur {}", rndInfo[0], rndInfo[1], rndInfo[2], rndInfo[3]);
 			RtRetrieveContext rtRetrieveCtx = RtRetrieveContext.builder()
 			                                                   .rtId(convertToLong(rndInfo[0]))
 			                                                   .taxCode((String)rndInfo[1])
-			                                                   .iur((String)rndInfo[2])
-			                                                   .iuv((String)rndInfo[3])
+			                                                   .iuv((String)rndInfo[2])
+			                                                   .iur((String)rndInfo[3])
 			                                                   .build();
 			toBeRetrieveList.add(rtRetrieveCtx);
 		}

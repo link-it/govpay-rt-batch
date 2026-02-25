@@ -23,7 +23,7 @@ public class Costanti {
     public static final String OPERATION_GET_RECEIPT = "getOrganizationReceiptIuvIur";
 
     // Operazione SOAP per invio ricevuta a GovPay
-    public static final String OPERATION_SEND_RECEIPT = "paSendRTV2";
+    public static final String OPERATION_SEND_RECEIPT = "rt_batch_paSendRTV2";
 
     // Nome job RT retrieve
     public static final String RT_RETRIEVE_JOB_NAME = "rtRetrieveJob";

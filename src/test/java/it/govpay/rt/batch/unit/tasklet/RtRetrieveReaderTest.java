@@ -73,8 +73,8 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{1L, TAX_CODE_1, IUR_1, IUV_1});
-            results.add(new Object[]{2L, TAX_CODE_2, IUR_2, IUV_2});
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
+            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -99,7 +99,7 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUR_1, IUV_1});
+            results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUV_1, IUR_1});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -121,8 +121,8 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{1L, TAX_CODE_1, IUR_1, IUV_1});
-            results.add(new Object[]{2L, TAX_CODE_2, IUR_2, IUV_2});
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
+            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -168,7 +168,7 @@ class RtRetrieveReaderTest {
 
             // Create a result with an Integer (unsupported)
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{Integer.valueOf(1), TAX_CODE_1, IUR_1, IUV_1});
+            results.add(new Object[]{Integer.valueOf(1), TAX_CODE_1, IUV_1, IUR_1});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 

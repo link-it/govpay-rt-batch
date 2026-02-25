@@ -16,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
+import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
+import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.govpay.common.gde.GdeUtils;
 import it.govpay.gde.client.beans.DettaglioRichiesta;
 import it.govpay.gde.client.beans.DettaglioRisposta;
@@ -45,8 +47,8 @@ class GdeUtilsTest {
         @Test
         @DisplayName("should serialize SOAP request as XML")
         void shouldSerializeSoapRequestAsXml() {
-            Object request = new Object();
-            doAnswer(invocation -> null).when(marshaller).marshal(eq(request), any(Result.class));
+            PaSendRTV2Request request = new PaSendRTV2Request();
+            doAnswer(invocation -> null).when(marshaller).marshal(any(), any(Result.class));
 
             RtGdeUtils.serializzaPayloadSoap(marshaller, nuovoEvento, request, null, null);
 
@@ -56,8 +58,8 @@ class GdeUtilsTest {
         @Test
         @DisplayName("should serialize SOAP response as XML")
         void shouldSerializeSoapResponseAsXml() {
-            Object response = new Object();
-            doAnswer(invocation -> null).when(marshaller).marshal(eq(response), any(Result.class));
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            doAnswer(invocation -> null).when(marshaller).marshal(any(), any(Result.class));
 
             RtGdeUtils.serializzaPayloadSoap(marshaller, nuovoEvento, null, response, null);
 
@@ -78,8 +80,8 @@ class GdeUtilsTest {
         @Test
         @DisplayName("should handle marshaller exception gracefully")
         void shouldHandleMarshallerExceptionGracefully() {
-            Object request = new Object();
-            doThrow(new RuntimeException("Marshal error")).when(marshaller).marshal(eq(request), any(Result.class));
+            PaSendRTV2Request request = new PaSendRTV2Request();
+            doThrow(new RuntimeException("Marshal error")).when(marshaller).marshal(any(), any(Result.class));
 
             RtGdeUtils.serializzaPayloadSoap(marshaller, nuovoEvento, request, null, null);
 

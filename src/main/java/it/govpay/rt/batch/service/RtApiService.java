@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -142,40 +143,40 @@ public class RtApiService {
 		OffsetDateTime dataEnd = null;
 		String pagoPABaseUrl = getBaseUrl(rtInfo.getTaxCode());
 
+		DomainInfo domainInfo = resolveDomainInfo(rtInfo.getTaxCode());
+		rtInfo.setIdIntermediario(domainInfo.intermediaryId());
+		rtInfo.setIdStazione(domainInfo.stationId());
+
 		ResponseEntity<CtReceiptModelResponse> response = null;
 		try {
 			response = getOrCreateApi(rtInfo.getTaxCode()).getOrganizationReceiptIuvIurWithHttpInfo(rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv(), null);
 			statusCodeFuture.complete(response.getStatusCode());
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
-		} catch (RestClientException e) {
-			log.error("Failed http call to retrieve missing receipt", e);
+		} catch (HttpClientErrorException.NotFound e) {
+			// 404 Not Found: ricevuta non disponibile su pagoPA -> skip e prosegui
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
+			log.warn("Ricevuta non trovata su pagoPA: taxCode {} - iur {} - iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
+			statusCodeFuture.complete(HttpStatus.NOT_FOUND);
+			gdeService.saveGetReceiptKo(rtInfo, response, e, dataStart, dataEnd, pagoPABaseUrl);
+			return null;
+		} catch (HttpClientErrorException.TooManyRequests e) {
+			// 429 Too Many Requests: rate limiting -> stop esecuzione
+			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
+			log.warn("Rate limit raggiunto su pagoPA per taxCode {} - iur {} - iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
+			gdeService.saveGetReceiptKo(rtInfo, response, e, dataStart, dataEnd, pagoPABaseUrl);
+			throw e;
+		} catch (RestClientException e) {
+			// Altri errori -> stop elaborazione
+			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
+			log.error("Errore durante il recupero della ricevuta: taxCode {} - iur {} - iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv(), e);
 			gdeService.saveGetReceiptKo(rtInfo, response, e, dataStart, dataEnd, pagoPABaseUrl);
 			throw e;
 		}
 
-		PaSendRTV2Request ret = null;
-		if (response.getStatusCode().equals(HttpStatus.OK)) {
-			log.debug("Recuperata ricevuta per l'organizzazione {} con iur {} e iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
-			DomainInfo domainInfo = resolveDomainInfo(rtInfo.getTaxCode());
-			ret = CtReceiptV2Converter.toPaSendRTV2Request(domainInfo.intermediaryId(), domainInfo.stationId(), rtInfo.getTaxCode(), response.getBody());
-			gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, pagoPABaseUrl);
-		} else
-		if (response.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
-			log.error("Receipt not found: taxCode: {} - iur: {} - iuv: {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
-			gdeService.saveGetReceiptKo(rtInfo, response, new RestClientException("Receipt not found"), dataStart, dataEnd, pagoPABaseUrl);
-		} else
-		if (response.getStatusCode().equals(HttpStatus.TOO_MANY_REQUESTS)) {
-			log.warn("Rate limit reached");
-			throw new RestClientException("Rate limit reached");
-		} else
-		if (response.getStatusCode().is5xxServerError()) {
-			log.error("Server error to retrieve missing receipt with status code {}", response.getStatusCode());
-			throw new RestClientException("Server error to retrieve missing receipt");
-		} else {
-			log.error("Fail to retrieve missing receipt with status code {}", response.getStatusCode());
-			throw new RestClientException("Fail to retrieve missing receipt");
-		}
+		// 200 OK: ricevuta recuperata -> salva e prosegui
+		log.debug("Recuperata ricevuta per l'organizzazione {} con iur {} e iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
+		PaSendRTV2Request ret = CtReceiptV2Converter.toPaSendRTV2Request(domainInfo.intermediaryId(), domainInfo.stationId(), rtInfo.getTaxCode(), response.getBody());
+		gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, pagoPABaseUrl);
 		return ret;
 	}
 

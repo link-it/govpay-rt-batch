@@ -1,6 +1,8 @@
 package it.govpay.rt.batch.client;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,37 +15,35 @@ import org.springframework.ws.transport.WebServiceConnection;
 import org.springframework.ws.transport.context.TransportContext;
 import org.springframework.ws.transport.context.TransportContextHolder;
 
-public class AuthorizationHeaderInserter implements ClientInterceptor{
-	
-	Logger log = LoggerFactory.getLogger(AuthorizationHeaderInserter.class);
-	
-	private final String headerName;
-	private final String subscriptionKey; 
-	
+public class AuthorizationHeaderInserter implements ClientInterceptor {
 
-	public AuthorizationHeaderInserter(String headerName, String subscriptionKey) {
-		this.headerName = headerName;
-		this.subscriptionKey = subscriptionKey;
+	Logger log = LoggerFactory.getLogger(AuthorizationHeaderInserter.class);
+
+	private final String authorizationHeaderValue;
+
+	public AuthorizationHeaderInserter(String username, String password) {
+		String credentials = username + ":" + password;
+		this.authorizationHeaderValue = "Basic " + Base64.getEncoder()
+				.encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 	}
 
 	@Override
 	public boolean handleRequest(MessageContext messageContext) throws WebServiceClientException {
+		log.debug("Adding HTTP Basic authentication header to the soap request");
+		TransportContext context = TransportContextHolder.getTransportContext();
+		WebServiceConnection connection = context.getConnection();
+		if (connection instanceof HeadersAwareSenderWebServiceConnection httpConnection) {
+			try {
+				httpConnection.addRequestHeader("Authorization", authorizationHeaderValue);
+			} catch (IOException e) {
+				throw new WebServiceIOException("Fail to insert authorization header", e);
+			}
+		}
 		return true;
 	}
 
 	@Override
 	public boolean handleResponse(MessageContext messageContext) throws WebServiceClientException {
-		log.debug("Adding authentication header to the soap request");
-		TransportContext context = TransportContextHolder.getTransportContext();
-		WebServiceConnection connection = context.getConnection();
-		if ( connection instanceof HeadersAwareSenderWebServiceConnection ) {
-			HeadersAwareSenderWebServiceConnection httpConnection = (HeadersAwareSenderWebServiceConnection) context.getConnection();
-			try {
-				httpConnection.addRequestHeader(headerName, subscriptionKey);
-			} catch (IOException e) {
-				throw new WebServiceIOException("Fail to insert principal header", e);
-			}
-		}
 		return true;
 	}
 
