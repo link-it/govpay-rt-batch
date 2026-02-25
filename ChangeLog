@@ -1,5 +1,10 @@
 2025-02-25  Giuliano Pintori <pintori@link.it>
 
+	* [Release]
+	Rilascio versione 1.0.0
+
+2025-02-25  Giuliano Pintori <pintori@link.it>
+
 	* [Enhancement]
 	Arricchimento eventi GDE
 	Aggiunte informazioni mancanti negli eventi inviati al GDE:
