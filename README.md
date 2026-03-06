@@ -37,15 +37,24 @@ mvn clean install
 
 ## Esecuzione
 
+I driver JDBC non sono inclusi nel fat JAR e devono essere forniti esternamente tramite la proprieta' `loader.path` (PropertiesLauncher).
+
 ```bash
+# Creare la directory per i driver JDBC e copiarvi il driver del database utilizzato
+mkdir -p jdbc-drivers/
+# Esempio per PostgreSQL:
+cp /path/to/postgresql-42.x.x.jar jdbc-drivers/
+
 # Avvio applicazione
-java -jar target/govpay-rt-batch.jar
+java -Dloader.path=./jdbc-drivers -jar target/govpay-rt-batch.jar
 
 # Con profilo specifico
-java -jar target/govpay-rt-batch.jar --spring.profiles.active=prod
+java -Dloader.path=./jdbc-drivers -jar target/govpay-rt-batch.jar --spring.profiles.active=prod
 ```
 
 ## Configurazione Docker
+
+I driver JDBC devono essere montati nella directory `/opt/jdbc-drivers` del container (configurabile tramite `GOVPAY_DS_JDBC_LIBS`).
 
 ```bash
 docker run -d \
@@ -54,8 +63,7 @@ docker run -d \
   -e GOVPAY_DB_NAME=govpay \
   -e GOVPAY_DB_USER=govpay \
   -e GOVPAY_DB_PASSWORD=secret \
-  -e GOVPAY_RT_API_ENV=uat \
-  -e GOVPAY_RT_API_SUBSCRIPTIONKEY=your-key \
+  -v /path/to/jdbc-drivers:/opt/jdbc-drivers \
   linkitaly/govpay-rt-batch:latest
 ```
 

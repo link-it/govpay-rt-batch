@@ -214,7 +214,10 @@ if [ -z "${JAR_FILE}" ]; then
     exit 1
 fi
 
+export LOADER_PATH="${GOVPAY_DS_JDBC_LIBS}"
+
 log_info "Avvio: ${JAR_FILE}"
+log_info "LOADER_PATH: ${LOADER_PATH}"
 log_info "========================================"
 
 exec java ${JAVA_OPTS} -jar "${JAR_FILE}"
