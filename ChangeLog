@@ -1,3 +1,22 @@
+2026-04-20  Giuliano Pintori <pintori@link.it>
+
+	* [CI/CD]
+	Aggiunto OSV Scan alla pipeline GitHub Actions
+	Integrato job osv-scan nella pipeline CI/CD utilizzando il reusable workflow
+	google/osv-scanner-action v2.3.5 per la scansione delle vulnerabilita' note.
+	- Attivazione su push a main, tag, o forzatura tramite variabile FORCE_OSV_JOB
+	- Fallimento su vulnerabilita' per branch main e tag
+	- Scansione ricorsiva del progetto con lockfile pom.xml
+	- Job release ora dipende dal completamento di build e osv-scan
+
+	* [Database]
+	Aggiunti script SQL di svecchiamento tabelle Spring Batch
+	Aggiunti script spring-batch-cleanup.sql per tutti i DBMS supportati:
+	- HSQLDB, MySQL, Oracle, PostgreSQL, SQL Server
+	Eliminano le esecuzioni di job completati (COMPLETED, FAILED, STOPPED, ABANDONED)
+	piu' vecchi di un numero configurabile di giorni (default: 90).
+	Le cancellazioni rispettano l'ordine imposto dalle foreign key.
+
 2025-03-06  Giuliano Pintori <pintori@link.it>
 
 	* [Release]
