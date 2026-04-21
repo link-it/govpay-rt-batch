@@ -132,7 +132,7 @@ jobs:
         path: third-party-licenses
 
     - name: Upload artifact to GitHub
-      uses: actions/upload-artifact@v7.6.0
+      uses: actions/upload-artifact@v7
       with:
         name: govpay-rt-batch
         path: |
