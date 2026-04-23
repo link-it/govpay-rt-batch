@@ -1,3 +1,17 @@
+2026-04-23  Giuliano Pintori <pintori@link.it>
+
+	* [CI/CD]
+	Consolidamento report nella GitHub Release
+	Il job release assembla tutti i report in un unico ZIP (release-reports-<tag>.zip)
+	invece di allegarli singolarmente:
+	- OWASP Dependency-Check (HTML + XML)
+	- JaCoCo coverage (XML + HTML zip)
+	- Third-party licenses
+	- OSV Scanner SARIF
+	- Link alla pipeline run
+	La release contiene ora solo 3 asset: JAR, sql.zip, release-reports zip.
+	Allineato job osv-scan con results-file-name per produrre artifact SARIF.
+
 2026-04-21  Giuliano Pintori <pintori@link.it>
 
 	* [Build]
