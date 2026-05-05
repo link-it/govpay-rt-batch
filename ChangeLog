@@ -1,3 +1,26 @@
+2026-05-05  Giuliano Pintori <pintori@link.it>
+
+	* [Build]
+	Avanzamento versione a 1.0.2
+	Aggiornamento parent govpay-bom da 1.1.3-SNAPSHOT a 1.1.3 (release)
+	Aggiornamento govpay-common da 1.0.0 a 1.1.2
+
+	* [GDE]
+	Implementato override di getConfigurazioneComponente in GdeService
+	per allineamento al nuovo contratto di AbstractGdeService introdotto
+	in govpay-common 1.1.2 (mapping ComponenteEvento -> GdeInterfaccia
+	tramite i getter del Giornale).
+
+2026-05-04  Giuliano Pintori <pintori@link.it>
+
+	* [CI/CD]
+	Aggiunto job SBOM CycloneDX alla pipeline
+	Generazione del Software Bill of Materials in formato CycloneDX
+	(json + xml, schema 1.6) tramite cyclonedx-maven-plugin 2.9.1.
+	Eseguito su push su main/tag (con possibilita' di forzatura tramite
+	FORCE_SBOM_JOB e disabilitazione tramite DISABLE_SBOM_JOB).
+	Il report SBOM viene incluso nello ZIP della GitHub Release.
+
 2026-04-23  Giuliano Pintori <pintori@link.it>
 
 	* [CI/CD]
