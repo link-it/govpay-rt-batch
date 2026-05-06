@@ -1,5 +1,13 @@
 2026-05-06  Giuliano Pintori <pintori@link.it>
 
+	* [Test]
+	Aumentata coverage di GdeService da 82.6% a 100%:
+	- test del nuovo metodo getConfigurazioneComponente (null check componente,
+	  null check giornale, mapping di tutti gli 8 valori di ComponenteEvento
+	  e ramo default per valori non gestiti)
+	- test di convertToGdeEvent (UnsupportedOperationException)
+	- test del ramo if di setResponsePayload con ParametriRisposta non null
+
 	* [CI/CD]
 	Fix step "Zip SQL files" del job release: aggiunto mkdir -p target per
 	creare la cartella di output prima dello zip (il job parte da un checkout
