@@ -19,10 +19,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.govpay.common.client.gde.HttpDataHolder;
+import it.govpay.common.configurazione.model.GdeInterfaccia;
+import it.govpay.common.configurazione.model.Giornale;
 import it.govpay.common.configurazione.service.ConfigurazioneService;
 import it.govpay.common.gde.AbstractGdeService;
 import it.govpay.common.gde.GdeEventInfo;
 import it.govpay.common.gde.GdeUtils;
+import it.govpay.gde.client.beans.ComponenteEvento;
 import it.govpay.gde.client.beans.Header;
 import it.govpay.gde.client.beans.NuovoEvento;
 import it.govpay.rt.batch.Costanti;
@@ -76,6 +79,24 @@ public class GdeService extends AbstractGdeService {
     protected NuovoEvento convertToGdeEvent(GdeEventInfo eventInfo) {
         throw new UnsupportedOperationException(
                 "GdeService usa sendEventAsync(NuovoEvento) direttamente, non il pattern GdeEventInfo");
+    }
+
+    @Override
+    protected GdeInterfaccia getConfigurazioneComponente(ComponenteEvento componente, Giornale giornale) {
+        if (componente == null || giornale == null) {
+            return null;
+        }
+        return switch (componente) {
+            case API_PAGOPA -> giornale.getApiPagoPA();
+            case API_ENTE -> giornale.getApiEnte();
+            case API_PAGAMENTO -> giornale.getApiPagamento();
+            case API_RAGIONERIA -> giornale.getApiRagioneria();
+            case API_BACKOFFICE -> giornale.getApiBackoffice();
+            case API_PENDENZE -> giornale.getApiPendenze();
+            case API_BACKEND_IO -> giornale.getApiBackendIO();
+            case API_MAGGIOLI_JPPA -> giornale.getApiMaggioliJPPA();
+            default -> null;
+        };
     }
 
     /**
