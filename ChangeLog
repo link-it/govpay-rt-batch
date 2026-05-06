@@ -8,6 +8,16 @@
 	- test di convertToGdeEvent (UnsupportedOperationException)
 	- test del ramo if di setResponsePayload con ParametriRisposta non null
 
+	* [Test]
+	Aggiunti test per portare in coverage classi precedentemente scoperte
+	(per soddisfare il quality gate Sonar "Coverage on New Code" >= 80%):
+	- CronJobRunnerTest: instanziazione del runner cron-mode
+	- ScheduledJobRunnerTest: instanziazione + delega a executeScheduledJob
+	- RtApiClientConfigTest: createPagoPAObjectMapper (configurazione
+	  feature, serializzazione/deserializzazione di OffsetDateTime e LocalDate)
+	- GovpayClientTest: sendReceipt con receipt null, con risposta wrappata
+	  in JAXBElement e con risposta non-wrappata
+
 	* [CI/CD]
 	Fix step "Zip SQL files" del job release: aggiunto mkdir -p target per
 	creare la cartella di output prima dello zip (il job parte da un checkout
