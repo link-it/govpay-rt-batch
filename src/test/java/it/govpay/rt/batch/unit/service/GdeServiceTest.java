@@ -27,7 +27,12 @@ import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
 import it.govpay.common.client.model.Connettore;
+import it.govpay.common.configurazione.model.GdeInterfaccia;
+import it.govpay.common.configurazione.model.Giornale;
 import it.govpay.common.configurazione.service.ConfigurazioneService;
+import it.govpay.common.gde.GdeEventInfo;
+import it.govpay.gde.client.beans.ComponenteEvento;
+import it.govpay.gde.client.beans.DettaglioRisposta;
 import it.govpay.gde.client.beans.EsitoEvento;
 import it.govpay.gde.client.beans.NuovoEvento;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
@@ -208,6 +213,106 @@ class GdeServiceTest {
             verify(eventoRtMapper).setParametriRichiesta(eq(mockEvento), eq(GOVPAY_URL), eq("POST"), anyList());
             verify(eventoRtMapper).setParametriRispostaSoap(eq(mockEvento), eq(dataEnd), eq(response), anyList());
             verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("convertToGdeEvent")
+    class ConvertToGdeEventTest {
+
+        @Test
+        @DisplayName("should throw UnsupportedOperationException")
+        void shouldThrowUnsupportedOperationException() {
+            UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
+                    () -> ReflectionTestUtils.invokeMethod(gdeService, "convertToGdeEvent",
+                            (GdeEventInfo) null));
+            assertTrue(ex.getMessage().contains("sendEventAsync"));
+        }
+    }
+
+    @Nested
+    @DisplayName("setResponsePayload")
+    class SetResponsePayloadTest {
+
+        @Test
+        @DisplayName("should invoke setPayload when ParametriRisposta is present")
+        void shouldSetPayloadWhenParametriRispostaPresent() {
+            setupGdeEnabled();
+            ResponseEntity<String> response = ResponseEntity.ok("receipt data");
+            DettaglioRisposta parametriRisposta = spy(new DettaglioRisposta());
+            NuovoEvento mockEvento = new NuovoEvento();
+            mockEvento.setParametriRisposta(parametriRisposta);
+            mockEvento.setEsito(EsitoEvento.OK);
+
+            when(eventoRtMapper.createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
+                    .thenReturn(mockEvento);
+
+            gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, PAGOPA_BASE_URL);
+
+            verify(parametriRisposta).setPayload(any());
+            verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("getConfigurazioneComponente")
+    class GetConfigurazioneComponenteTest {
+
+        private GdeInterfaccia invoke(ComponenteEvento componente, Giornale giornale) {
+            return ReflectionTestUtils.invokeMethod(gdeService, "getConfigurazioneComponente",
+                    componente, giornale);
+        }
+
+        @Test
+        @DisplayName("should return null when componente is null")
+        void shouldReturnNullWhenComponenteIsNull() {
+            assertNull(invoke(null, new Giornale()));
+        }
+
+        @Test
+        @DisplayName("should return null when giornale is null")
+        void shouldReturnNullWhenGiornaleIsNull() {
+            assertNull(invoke(ComponenteEvento.API_PAGOPA, null));
+        }
+
+        @Test
+        @DisplayName("should map each componente to the matching Giornale getter")
+        void shouldMapEachComponenteToMatchingGetter() {
+            Giornale giornale = new Giornale();
+            GdeInterfaccia apiPagoPA = new GdeInterfaccia();
+            GdeInterfaccia apiEnte = new GdeInterfaccia();
+            GdeInterfaccia apiPagamento = new GdeInterfaccia();
+            GdeInterfaccia apiRagioneria = new GdeInterfaccia();
+            GdeInterfaccia apiBackoffice = new GdeInterfaccia();
+            GdeInterfaccia apiPendenze = new GdeInterfaccia();
+            GdeInterfaccia apiBackendIO = new GdeInterfaccia();
+            GdeInterfaccia apiMaggioliJPPA = new GdeInterfaccia();
+            giornale.setApiPagoPA(apiPagoPA);
+            giornale.setApiEnte(apiEnte);
+            giornale.setApiPagamento(apiPagamento);
+            giornale.setApiRagioneria(apiRagioneria);
+            giornale.setApiBackoffice(apiBackoffice);
+            giornale.setApiPendenze(apiPendenze);
+            giornale.setApiBackendIO(apiBackendIO);
+            giornale.setApiMaggioliJPPA(apiMaggioliJPPA);
+
+            assertSame(apiPagoPA, invoke(ComponenteEvento.API_PAGOPA, giornale));
+            assertSame(apiEnte, invoke(ComponenteEvento.API_ENTE, giornale));
+            assertSame(apiPagamento, invoke(ComponenteEvento.API_PAGAMENTO, giornale));
+            assertSame(apiRagioneria, invoke(ComponenteEvento.API_RAGIONERIA, giornale));
+            assertSame(apiBackoffice, invoke(ComponenteEvento.API_BACKOFFICE, giornale));
+            assertSame(apiPendenze, invoke(ComponenteEvento.API_PENDENZE, giornale));
+            assertSame(apiBackendIO, invoke(ComponenteEvento.API_BACKEND_IO, giornale));
+            assertSame(apiMaggioliJPPA, invoke(ComponenteEvento.API_MAGGIOLI_JPPA, giornale));
+        }
+
+        @Test
+        @DisplayName("should return null for unmapped componente values")
+        void shouldReturnNullForUnmappedComponenti() {
+            Giornale giornale = new Giornale();
+            assertNull(invoke(ComponenteEvento.API_GOVPAY, giornale));
+            assertNull(invoke(ComponenteEvento.GOVPAY, giornale));
+            assertNull(invoke(ComponenteEvento.API_USER, giornale));
         }
     }
 
