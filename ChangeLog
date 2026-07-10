@@ -1,3 +1,40 @@
+2026-07-10  Giuliano Pintori <pintori@link.it>
+
+	* [Build]
+	Avanzamento versione a 2.0.0
+	Aggiornamento parent govpay-bom a 2.0.1 (Spring Boot 4.1.0,
+	Spring Framework 7.0.8, Jackson 3.1.4) e govpay-common a 2.0.0.
+	Aggiunta versione esplicita a hibernate-jpamodelgen.
+
+	* [Migration]
+	Migrazione a Spring Batch 6
+	Riorganizzati i package org.springframework.batch.core.* (job, job.parameters,
+	step, listener) e org.springframework.batch.infrastructure.* (item, repeat).
+	JobExplorer -> JobRepository, JobLauncher -> JobOperator,
+	JobParametersInvalidException -> InvalidJobParametersException.
+	JobExecution.getJobId() -> getJobInstanceId(); getId() ora restituisce long.
+
+	* [Migration]
+	Migrazione a Spring Boot 4
+	@EntityScan spostato in org.springframework.boot.persistence.autoconfigure.
+	Slice di test @DataJpaTest in org.springframework.boot.data.jpa.test.autoconfigure
+	(aggiunta dipendenza di test spring-boot-data-jpa-test).
+
+	* [Migration]
+	Migrazione a Jackson 3 (tools.jackson)
+	ObjectMapper, serializer/deserializer custom e feature migrati da
+	com.fasterxml.jackson a tools.jackson. RtApiClientConfig costruisce
+	l'ObjectMapper (immutabile) via JsonMapper.builder con le feature
+	EnumFeature/DateTimeFeature. RtApiService usa JacksonJsonHttpMessageConverter.
+	Client REST generato da OpenAPI configurato per Jackson 3 tramite le opzioni
+	useSpringBoot4 e useJackson3 dell'openapi-generator-maven-plugin.
+
+	* [CI/CD]
+	Workflow refresh-owasp-db reso piu' robusto: preflight di disponibilita'
+	dell'endpoint NVD, tuning di retry/delay via variabili d'ambiente, versione
+	OWASP letta dal pom (help:evaluate), cache key versionata per versione plugin
+	e URL di download aggiornato (dependency-check/DependencyCheck).
+
 2026-05-12  Giuliano Pintori <pintori@link.it>
 
 	* [Build]

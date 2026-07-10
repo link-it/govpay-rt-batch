@@ -11,10 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -68,7 +68,7 @@ class RtRetrieveJobTest {
 	private Job rtRetrieveJob;
 
 	@Autowired
-	private JobLauncher jobLauncher;
+	private JobOperator jobOperator;
 
 	@Autowired
 	private RestTemplate testPagoPARestTemplate;
@@ -157,7 +157,7 @@ class RtRetrieveJobTest {
 		// Given: empty database (no rendicontazioni to process)
 
 		// When: launch the job
-		JobExecution jobExecution = jobLauncher.run(rtRetrieveJob, uniqueJobParameters());
+		JobExecution jobExecution = jobOperator.start(rtRetrieveJob, uniqueJobParameters());
 
 		// Then: job completed with no processing
 		assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
@@ -167,7 +167,7 @@ class RtRetrieveJobTest {
 		mockWsServer.verify();
 	}
 
-	private org.springframework.batch.core.JobParameters uniqueJobParameters() {
+	private org.springframework.batch.core.job.parameters.JobParameters uniqueJobParameters() {
 		return new JobParametersBuilder()
 				.addLong("run.id", System.currentTimeMillis())
 				.toJobParameters();

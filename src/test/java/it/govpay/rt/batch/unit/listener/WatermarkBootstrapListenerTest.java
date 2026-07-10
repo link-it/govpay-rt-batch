@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
-import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
 import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.listener.WatermarkBootstrapListener;
@@ -27,7 +27,7 @@ import it.govpay.rt.batch.listener.WatermarkBootstrapListener;
 class WatermarkBootstrapListenerTest {
 
     @Mock
-    private JobExplorer jobExplorer;
+    private JobRepository jobRepository;
 
     @Mock
     private JobExecution currentExecution;
@@ -43,7 +43,7 @@ class WatermarkBootstrapListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new WatermarkBootstrapListener(jobExplorer);
+        listener = new WatermarkBootstrapListener(jobRepository);
         currentContext = new ExecutionContext();
 
         when(currentExecution.getId()).thenReturn(CURRENT_EXECUTION_ID);
@@ -59,7 +59,7 @@ class WatermarkBootstrapListenerTest {
         @Test
         @DisplayName("should set lastProcessedId to 0 when no previous executions exist")
         void shouldSetLastProcessedIdToZeroWhenNoPreviousExecutions() {
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Collections.emptyList());
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Collections.emptyList());
 
             listener.beforeJob(currentExecution);
 
@@ -78,8 +78,8 @@ class WatermarkBootstrapListenerTest {
             when(prevExecution.getId()).thenReturn(99L);
             when(prevExecution.getExecutionContext()).thenReturn(prevContext);
 
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(prevInstance));
-            when(jobExplorer.getJobExecutions(prevInstance)).thenReturn(Arrays.asList(prevExecution));
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(prevInstance));
+            when(jobRepository.getJobExecutions(prevInstance)).thenReturn(Arrays.asList(prevExecution));
 
             listener.beforeJob(currentExecution);
 
@@ -99,8 +99,8 @@ class WatermarkBootstrapListenerTest {
             when(prevExecution.getExecutionContext()).thenReturn(prevContext);
 
             // Current execution should be skipped
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance));
-            when(jobExplorer.getJobExecutions(instance)).thenReturn(Arrays.asList(currentExecution, prevExecution));
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance));
+            when(jobRepository.getJobExecutions(instance)).thenReturn(Arrays.asList(currentExecution, prevExecution));
 
             listener.beforeJob(currentExecution);
 
@@ -127,9 +127,9 @@ class WatermarkBootstrapListenerTest {
             when(execution2.getId()).thenReturn(97L);
             when(execution2.getExecutionContext()).thenReturn(context2);
 
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance1, instance2));
-            when(jobExplorer.getJobExecutions(instance1)).thenReturn(Arrays.asList(execution1));
-            when(jobExplorer.getJobExecutions(instance2)).thenReturn(Arrays.asList(execution2));
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance1, instance2));
+            when(jobRepository.getJobExecutions(instance1)).thenReturn(Arrays.asList(execution1));
+            when(jobRepository.getJobExecutions(instance2)).thenReturn(Arrays.asList(execution2));
 
             listener.beforeJob(currentExecution);
 
@@ -155,9 +155,9 @@ class WatermarkBootstrapListenerTest {
             when(execution2.getId()).thenReturn(97L);
             when(execution2.getExecutionContext()).thenReturn(context2);
 
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance1, instance2));
-            when(jobExplorer.getJobExecutions(instance1)).thenReturn(Arrays.asList(execution1));
-            when(jobExplorer.getJobExecutions(instance2)).thenReturn(Arrays.asList(execution2));
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance1, instance2));
+            when(jobRepository.getJobExecutions(instance1)).thenReturn(Arrays.asList(execution1));
+            when(jobRepository.getJobExecutions(instance2)).thenReturn(Arrays.asList(execution2));
 
             listener.beforeJob(currentExecution);
 
@@ -180,8 +180,8 @@ class WatermarkBootstrapListenerTest {
             JobExecution execution2 = mock(JobExecution.class);
             lenient().when(execution2.getId()).thenReturn(98L);
 
-            when(jobExplorer.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance));
-            when(jobExplorer.getJobExecutions(instance)).thenReturn(Arrays.asList(execution1, execution2));
+            when(jobRepository.getJobInstances(JOB_NAME, 0, 10)).thenReturn(Arrays.asList(instance));
+            when(jobRepository.getJobExecutions(instance)).thenReturn(Arrays.asList(execution1, execution2));
 
             listener.beforeJob(currentExecution);
 

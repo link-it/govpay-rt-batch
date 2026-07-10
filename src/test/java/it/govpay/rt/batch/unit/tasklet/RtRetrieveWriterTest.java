@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
 import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;

@@ -15,9 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
 
 import it.govpay.rt.batch.utils.LocalDateFlexibleDeserializer;
 
@@ -45,8 +45,8 @@ class LocalDateFlexibleDeserializerTest {
         @Test
         @DisplayName("should deserialize standard date format")
         void shouldDeserializeStandardDateFormat() throws IOException {
-            when(jsonParser.getCurrentToken()).thenReturn(JsonToken.VALUE_STRING);
-            when(jsonParser.getText()).thenReturn("2024-03-15");
+            when(jsonParser.currentToken()).thenReturn(JsonToken.VALUE_STRING);
+            when(jsonParser.getString()).thenReturn("2024-03-15");
 
             LocalDate result = deserializer.deserialize(jsonParser, deserializationContext);
 
@@ -56,8 +56,8 @@ class LocalDateFlexibleDeserializerTest {
 
         @Test
         @DisplayName("should return null for non-string token")
-        void shouldReturnNullForNonStringToken() throws IOException {
-            when(jsonParser.getCurrentToken()).thenReturn(JsonToken.VALUE_NUMBER_INT);
+        void shouldReturnNullForNonStringToken() {
+            when(jsonParser.currentToken()).thenReturn(JsonToken.VALUE_NUMBER_INT);
 
             LocalDate result = deserializer.deserialize(jsonParser, deserializationContext);
 
@@ -65,12 +65,12 @@ class LocalDateFlexibleDeserializerTest {
         }
 
         @Test
-        @DisplayName("should throw IOException on parse failure")
-        void shouldThrowIOExceptionOnParseFailure() throws IOException {
-            when(jsonParser.getCurrentToken()).thenReturn(JsonToken.VALUE_STRING);
-            when(jsonParser.getText()).thenReturn("invalid-date");
+        @DisplayName("should throw DateTimeParseException on parse failure")
+        void shouldThrowOnParseFailure() {
+            when(jsonParser.currentToken()).thenReturn(JsonToken.VALUE_STRING);
+            when(jsonParser.getString()).thenReturn("invalid-date");
 
-            assertThrows(IOException.class, () -> deserializer.deserialize(jsonParser, deserializationContext));
+            assertThrows(DateTimeParseException.class, () -> deserializer.deserialize(jsonParser, deserializationContext));
         }
     }
 

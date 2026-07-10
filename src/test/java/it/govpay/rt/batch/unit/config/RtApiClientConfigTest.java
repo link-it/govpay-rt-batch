@@ -15,9 +15,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.cfg.EnumFeature;
 
 import it.govpay.rt.batch.config.RtApiClientConfig;
 
@@ -38,11 +38,11 @@ class RtApiClientConfigTest {
         ObjectMapper objectMapper = config.createPagoPAObjectMapper();
 
         assertNotNull(objectMapper);
-        assertEquals(TimeZone.getTimeZone("Europe/Rome"), objectMapper.getSerializationConfig().getTimeZone());
-        assertTrue(objectMapper.isEnabled(DeserializationFeature.READ_ENUMS_USING_TO_STRING));
-        assertTrue(objectMapper.isEnabled(SerializationFeature.WRITE_ENUMS_USING_TO_STRING));
-        assertTrue(objectMapper.isEnabled(SerializationFeature.WRITE_DATES_WITH_ZONE_ID));
-        assertFalse(objectMapper.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS));
+        assertEquals(TimeZone.getTimeZone("Europe/Rome"), objectMapper.serializationConfig().getTimeZone());
+        assertTrue(objectMapper.isEnabled(EnumFeature.READ_ENUMS_USING_TO_STRING));
+        assertTrue(objectMapper.isEnabled(EnumFeature.WRITE_ENUMS_USING_TO_STRING));
+        assertTrue(objectMapper.isEnabled(DateTimeFeature.WRITE_DATES_WITH_ZONE_ID));
+        assertFalse(objectMapper.isEnabled(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS));
     }
 
     @Test

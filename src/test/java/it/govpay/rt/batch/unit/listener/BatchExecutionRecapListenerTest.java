@@ -13,7 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.BatchStatus;
-import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.job.JobExecution;
 
 import it.govpay.rt.batch.listener.BatchExecutionRecapListener;
 
@@ -38,10 +38,10 @@ class BatchExecutionRecapListenerTest {
         @Test
         @DisplayName("should log job start without throwing")
         void shouldLogJobStartWithoutThrowing() {
-            when(jobExecution.getJobId()).thenReturn(123L);
+            when(jobExecution.getJobInstanceId()).thenReturn(123L);
 
             assertDoesNotThrow(() -> listener.beforeJob(jobExecution));
-            verify(jobExecution).getJobId();
+            verify(jobExecution).getJobInstanceId();
         }
     }
 
