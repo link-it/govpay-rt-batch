@@ -8,13 +8,13 @@
     <parent>
         <groupId>org.gov4j.govpay</groupId>
         <artifactId>govpay-bom</artifactId>
-        <version>1.1.3</version>
+        <version>2.0.1</version>
         <relativePath/>
     </parent>
 
     <groupId>it.govpay</groupId>
     <artifactId>govpay-rt-batch</artifactId>
-    <version>1.0.3</version>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
 
     <name>GovPay RT Batch</name>
@@ -37,7 +37,7 @@
         <sonar.coverage.exclusions>**/test/**,**/*Test*.java</sonar.coverage.exclusions>
 
         <!-- govpay-common -->
-        <govpay-common.version>1.1.2</govpay-common.version>
+        <govpay-common.version>2.0.0</govpay-common.version>
     </properties>
 
     <repositories>
@@ -152,6 +152,7 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-jpamodelgen</artifactId>
+            <version>${hibernate.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -172,6 +173,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Slice @DataJpaTest: in Spring Boot 4 vive in un artefatto dedicato
+             (non più in spring-boot-test-autoconfigure). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-data-jpa-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -274,7 +282,8 @@
                                 <dateLibrary>java8</dateLibrary>
                                 <sourceFolder>src/gen/java/main</sourceFolder>
                                 <useJakartaEe>true</useJakartaEe>
-                                <useSpringBoot3>true</useSpringBoot3>
+                                <useSpringBoot4>true</useSpringBoot4>
+                                <useJackson3>true</useJackson3>
                                 <hideGenerationTimestamp>true</hideGenerationTimestamp>
                                 <useBeanValidation>false</useBeanValidation>
                                 <performBeanValidation>false</performBeanValidation>

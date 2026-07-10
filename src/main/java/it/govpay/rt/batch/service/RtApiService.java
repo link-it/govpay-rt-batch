@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -93,9 +93,9 @@ public class RtApiService {
 			RestTemplate restTemplate = connettoreService.getRestTemplate(code);
 
 			// Customize ObjectMapper for pagoPA date handling
-			MappingJackson2HttpMessageConverter converter =
-				new MappingJackson2HttpMessageConverter(rtApiClientConfig.createPagoPAObjectMapper());
-			restTemplate.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
+			JacksonJsonHttpMessageConverter converter =
+				new JacksonJsonHttpMessageConverter(rtApiClientConfig.createPagoPAObjectMapper());
+			restTemplate.getMessageConverters().removeIf(JacksonJsonHttpMessageConverter.class::isInstance);
 			restTemplate.getMessageConverters().add(0, converter);
 
 			Connettore connettore = connettoreService.getConnettore(code);

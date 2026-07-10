@@ -1,12 +1,11 @@
 package it.govpay.rt.batch.utils;
 
-import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ser.std.StdScalarSerializer;
 
 import it.govpay.rt.batch.Costanti;
 
@@ -38,7 +37,7 @@ public class OffsetDateTimeSerializer extends StdScalarSerializer<OffsetDateTime
 	}
 
 	@Override
-	public void serialize(OffsetDateTime dateTime, JsonGenerator jsonGenerator, SerializerProvider provider) throws IOException {
+	public void serialize(OffsetDateTime dateTime, JsonGenerator jsonGenerator, SerializationContext provider) {
 		String dateTimeAsString = dateTime != null ? this.formatter.format(dateTime) : null;
 		jsonGenerator.writeString(dateTimeAsString);
 	}
