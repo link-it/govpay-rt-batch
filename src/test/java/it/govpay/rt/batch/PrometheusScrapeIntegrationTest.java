@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import it.govpay.common.batch.service.JobConcurrencyService;
@@ -43,6 +44,12 @@ import it.govpay.rt.batch.repository.RendicontazioniRepository;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestScheduledJobRunnerConfig.class)
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+        // application.properties imposta initialDelayString=1 (1ms): senza questo
+        // override lo @Scheduled reale lancia rtRetrieveJob quasi subito, in
+        // corsa con la chiamata esplicita del test sullo stesso job.
+        "scheduler.initialDelayString=3600000"
+})
 class PrometheusScrapeIntegrationTest {
 
     @LocalServerPort
