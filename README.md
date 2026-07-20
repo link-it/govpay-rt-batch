@@ -52,6 +52,24 @@ java -Dloader.path=./jdbc-drivers -jar target/govpay-rt-batch.jar
 java -Dloader.path=./jdbc-drivers -jar target/govpay-rt-batch.jar --spring.profiles.active=prod
 ```
 
+## Metriche Prometheus
+
+Gli endpoint `/actuator/health` e `/actuator/prometheus` rispondono di default sulla **stessa porta**
+dell'applicazione (nessuna porta management separata è configurata). Per esporli su una porta dedicata
+impostare:
+
+```properties
+management.server.port=[Porta dedicata per gli endpoint actuator]
+```
+
+oppure, in ambiente Docker, la variabile d'ambiente equivalente:
+
+```bash
+MANAGEMENT_SERVER_PORT=[Porta dedicata per gli endpoint actuator]
+```
+
+Se non valorizzata, gli endpoint restano sulla porta applicativa.
+
 ## Configurazione Docker
 
 I driver JDBC devono essere montati nella directory `/opt/jdbc-drivers` del container (configurabile tramite `GOVPAY_DS_JDBC_LIBS`).

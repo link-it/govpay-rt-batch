@@ -37,7 +37,7 @@
         <sonar.coverage.exclusions>**/test/**,**/*Test*.java</sonar.coverage.exclusions>
 
         <!-- govpay-common -->
-        <govpay-common.version>2.0.0</govpay-common.version>
+        <govpay-common.version>2.0.1-SNAPSHOT</govpay-common.version>
     </properties>
 
     <repositories>
@@ -139,6 +139,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Endpoint di scrape Prometheus (/actuator/prometheus) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
         <!-- Lombok -->
