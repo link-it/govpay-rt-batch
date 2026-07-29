@@ -20,6 +20,7 @@ import it.govpay.common.batch.dto.NextExecutionInfo;
 import it.govpay.common.batch.runner.JobExecutionHelper;
 import it.govpay.rt.batch.Costanti;
 import it.govpay.rt.batch.service.RtApiService;
+import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -40,8 +41,9 @@ public class BatchController extends AbstractBatchController {
             RtApiService rtApiService,
             Environment environment,
             ZoneId applicationZoneId,
-            @Value("${scheduler.rtRetrieveJob.fixedDelayString:7200000}") long schedulerIntervalMillis) {
-        super(jobExecutionHelper, jobRepository, environment, applicationZoneId, schedulerIntervalMillis);
+            @Value("${scheduler.rtRetrieveJob.fixedDelayString:7200000}") long schedulerIntervalMillis,
+            EntityManager entityManager) {
+        super(jobExecutionHelper, jobRepository, environment, applicationZoneId, schedulerIntervalMillis, entityManager);
         this.rtRetrieveJob = rtRetrieveJob;
         this.rtApiService = rtApiService;
     }
@@ -54,6 +56,18 @@ public class BatchController extends AbstractBatchController {
     @Override
     protected String getJobName() {
         return Costanti.RT_RETRIEVE_JOB_NAME;
+    }
+
+    @Override
+    protected String getDisplayName() {
+        return "Recupero ricevute (RT) da pagoPA";
+    }
+
+    @Override
+    protected String getDescription() {
+        return "Recupero automatico delle Ricevute Telematiche (RT) da pagoPA tramite API REST: il batch "
+                + "acquisisce le RT mancanti interrogando il Nodo dei Pagamenti e le riconcilia con i pagamenti "
+                + "esistenti.";
     }
 
     @Override
