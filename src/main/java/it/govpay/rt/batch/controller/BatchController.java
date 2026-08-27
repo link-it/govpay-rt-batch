@@ -1,12 +1,7 @@
 package it.govpay.rt.batch.controller;
 
-import java.time.ZoneId;
-
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,10 +12,9 @@ import it.govpay.common.batch.controller.AbstractBatchController;
 import it.govpay.common.batch.dto.BatchStatusInfo;
 import it.govpay.common.batch.dto.LastExecutionInfo;
 import it.govpay.common.batch.dto.NextExecutionInfo;
-import it.govpay.common.batch.runner.JobExecutionHelper;
 import it.govpay.rt.batch.Costanti;
+import it.govpay.rt.batch.config.BatchControllerSupport;
 import it.govpay.rt.batch.service.RtApiService;
-import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,15 +29,11 @@ public class BatchController extends AbstractBatchController {
     private final RtApiService rtApiService;
 
     public BatchController(
-            JobExecutionHelper jobExecutionHelper,
-            JobRepository jobRepository,
+            BatchControllerSupport support,
             @Qualifier("rtRetrieveJob") Job rtRetrieveJob,
-            RtApiService rtApiService,
-            Environment environment,
-            ZoneId applicationZoneId,
-            @Value("${scheduler.rtRetrieveJob.fixedDelayString:7200000}") long schedulerIntervalMillis,
-            EntityManager entityManager) {
-        super(jobExecutionHelper, jobRepository, environment, applicationZoneId, schedulerIntervalMillis, entityManager);
+            RtApiService rtApiService) {
+        super(support.jobExecutionHelper(), support.jobRepository(), support.environment(),
+                support.applicationZoneId(), support.schedulerIntervalMillis(), support.entityManager());
         this.rtRetrieveJob = rtRetrieveJob;
         this.rtApiService = rtApiService;
     }

@@ -62,8 +62,11 @@ public class BatchJobConfiguration {
         RtRetrieveProcessor rtRetrieveProcessor,
         RtRetrieveWriter rtRetrieveWriter
     ) {
+        // chunk(int, PlatformTransactionManager) e' deprecato da Spring Batch 6 e rimosso
+        // in 7: il transaction manager si passa ora con la fluent .transactionManager().
         return new StepBuilder("rtRetrieveTasklet", jobRepository)
-            .<RtRetrieveContext, RtRetrieveBatch>chunk(1, transactionManager)
+            .<RtRetrieveContext, RtRetrieveBatch>chunk(1)
+            .transactionManager(transactionManager)
             .reader(rtRetrieveReader)
             .processor(rtRetrieveProcessor)
             .writer(rtRetrieveWriter)

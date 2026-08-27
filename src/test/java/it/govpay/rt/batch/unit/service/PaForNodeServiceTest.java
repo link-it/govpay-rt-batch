@@ -106,15 +106,32 @@ class PaForNodeServiceTest {
         }
 
         @Test
-        @DisplayName("should work when GdeService is null")
-        void shouldWorkWhenGdeServiceIsNull() {
-            service = new PaForNodeService(null, govpayClient);
+        @DisplayName("should return false and save KO event when response is null")
+        void shouldReturnFalseWhenResponseIsNull() {
+            // GovpayClient restituisce null quando la richiesta non e' valorizzata:
+            // il servizio non deve dereferenziare la response.
+            when(govpayClient.sendReceipt(request)).thenReturn(null);
+
+            boolean result = service.sendReceipt(rtInfo, request);
+
+            assertFalse(result);
+            verify(govpayClient).sendReceipt(request);
+            verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
+            verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should return false and save KO event when outcome is null")
+        void shouldReturnFalseWhenOutcomeIsNull() {
             PaSendRTV2Response response = new PaSendRTV2Response();
-            response.setOutcome(StOutcome.OK);
+            response.setOutcome(null);
             when(govpayClient.sendReceipt(request)).thenReturn(response);
 
-            // Should throw NullPointerException because gdeService is null
-            assertThrows(NullPointerException.class, () -> service.sendReceipt(rtInfo, request));
+            boolean result = service.sendReceipt(rtInfo, request);
+
+            assertFalse(result);
+            verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
+            verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
         }
     }
 }

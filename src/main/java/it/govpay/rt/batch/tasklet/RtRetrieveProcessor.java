@@ -7,6 +7,7 @@ import it.govpay.rt.batch.service.PaForNodeService;
 import it.govpay.rt.batch.service.RtApiService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 
@@ -24,10 +25,12 @@ public class RtRetrieveProcessor implements ItemProcessor<RtRetrieveContext, RtR
 
     private final RtApiService rtApiService;
     private final PaForNodeService govpayService;
+    private final Clock clock;
 
-    public RtRetrieveProcessor(RtApiService rtApiService, PaForNodeService govpayService) {
+    public RtRetrieveProcessor(RtApiService rtApiService, PaForNodeService govpayService, Clock clock) {
         this.rtApiService = rtApiService;
         this.govpayService = govpayService;
+        this.clock = clock;
     }
 
     @Override
@@ -56,7 +59,7 @@ public class RtRetrieveProcessor implements ItemProcessor<RtRetrieveContext, RtR
                                   .codDominio(context.getTaxCode())
                                   .iur(context.getIur())
                                   .iuv(context.getIuv())
-                                  .retrivedTime(LocalDateTime.now())
+                                  .retrivedTime(LocalDateTime.now(clock))
                                   .build();
         return RtRetrieveBatch.builder()
                               .rtId(context.getRtId())

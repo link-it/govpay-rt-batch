@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,10 +42,11 @@ class RtRetrieveProcessorTest {
     private static final String TAX_CODE = "12345678901";
     private static final String IUV = "01234567890123456";
     private static final String IUR = "IUR123456";
+    private static final Clock CLOCK = Clock.system(ZoneId.of("Europe/Rome"));
 
     @BeforeEach
     void setUp() {
-        processor = new RtRetrieveProcessor(rtApiService, govpayService);
+        processor = new RtRetrieveProcessor(rtApiService, govpayService, CLOCK);
 
         context = RtRetrieveContext.builder()
                 .rtId(RT_ID)

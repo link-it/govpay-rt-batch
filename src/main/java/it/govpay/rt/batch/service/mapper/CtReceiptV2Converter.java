@@ -1,6 +1,9 @@
 package it.govpay.rt.batch.service.mapper;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+
+import org.springframework.util.StringUtils;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.CtEntityUniqueIdentifier;
 import it.gov.pagopa.pagopa_api.pa.pafornode.CtReceiptV2;
@@ -91,8 +94,12 @@ public class CtReceiptV2Converter {
 			ctTransferPAReceiptV2.setFiscalCodePA(TransferPA.getFiscalCodePA());
 			ctTransferPAReceiptV2.setIBAN(TransferPA.getIban());
 			ctTransferPAReceiptV2.setIdTransfer(TransferPA.getIdTransfer());
-			if(TransferPA.getMbdAttachment() != null) {
-				ctTransferPAReceiptV2.setMBDAttachment(TransferPA.getMbdAttachment().getBytes());
+			// getMbdAttachment() e' annotato @Nonnull dal generatore OpenAPI, quindi il
+			// solo controllo di nullita' non discrimina mai: l'allegato MBD va comunque
+			// valorizzato solo quando presente, ed e' l'assenza di contenuto a doverlo
+			// escludere. hasText() copre entrambi i casi (null e stringa vuota/blank).
+			if (StringUtils.hasText(TransferPA.getMbdAttachment())) {
+				ctTransferPAReceiptV2.setMBDAttachment(TransferPA.getMbdAttachment().getBytes(StandardCharsets.UTF_8));
 			}
 			ctTransferPAReceiptV2.setMetadata(toCtReceiptV2Metadata(TransferPA.getMetadata()));
 			ctTransferPAReceiptV2.setRemittanceInformation(TransferPA.getRemittanceInformation());
