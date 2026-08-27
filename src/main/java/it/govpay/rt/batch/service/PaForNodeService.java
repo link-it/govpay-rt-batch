@@ -3,7 +3,6 @@ package it.govpay.rt.batch.service;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
@@ -24,8 +23,7 @@ public class PaForNodeService {
 	private final GdeService gdeService;
 	private final GovpayClient govpayClient;
 
-	public PaForNodeService(@Autowired(required = false) GdeService gdeService,
-							GovpayClient govpayClient) {
+	public PaForNodeService(GdeService gdeService, GovpayClient govpayClient) {
 		this.gdeService = gdeService;
 		this.govpayClient = govpayClient;
 	}
@@ -35,21 +33,30 @@ public class PaForNodeService {
 
 		OffsetDateTime dataStart = OffsetDateTime.now(ZoneOffset.UTC);
 		OffsetDateTime dataEnd = null;
-		PaSendRTV2Response response = null;
 
 		try {
-			response = govpayClient.sendReceipt(receiptToSend);
+			PaSendRTV2Response response = govpayClient.sendReceipt(receiptToSend);
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
-			log.debug("Ricevuta risposta da govpay: {}", response.getOutcome());
 
-			if (response.getOutcome().equals(StOutcome.OK)) {
-				gdeService.saveSendReceiptOk(rtInfo, receiptToSend, response, dataStart, dataEnd);
-				return true;
-			} else {
+			// govpayClient restituisce null quando la richiesta non e' valorizzata:
+			// senza questa guardia il ramo successivo dereferenzia una response nulla.
+			if (response == null) {
+				log.error("Nessuna risposta da govpay per l'invio della ricevuta");
 				gdeService.saveSendReceiptKo(rtInfo, receiptToSend,
-						new Exception("Outcome KO: " + response.getFault()), dataStart, dataEnd);
+						new IllegalStateException("Nessuna risposta da govpay"), dataStart, dataEnd);
 				return false;
 			}
+
+			log.debug("Ricevuta risposta da govpay: {}", response.getOutcome());
+
+			if (StOutcome.OK.equals(response.getOutcome())) {
+				gdeService.saveSendReceiptOk(rtInfo, receiptToSend, response, dataStart, dataEnd);
+				return true;
+			}
+
+			gdeService.saveSendReceiptKo(rtInfo, receiptToSend,
+					new IllegalStateException("Outcome KO: " + response.getFault()), dataStart, dataEnd);
+			return false;
 		} catch (Exception e) {
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
 			log.error("Errore durante l'invio della ricevuta a govpay", e);

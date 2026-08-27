@@ -21,12 +21,13 @@ import it.govpay.rt.batch.Costanti;
  * Handles variable-length milliseconds (1-9 digits) from pagoPA API responses.
  * Also handles dates without seconds (e.g., 2025-12-09T00:00+01:00).
  * Falls back to CET timezone if parsing fails without timezone information.
+ * <p>
+ * In Jackson 3 (tools.jackson) i deserializer non sono piu' {@link java.io.Serializable},
+ * quindi non servono ne' serialVersionUID ne' il modificatore transient sui campi.
  */
 public class OffsetDateTimeDeserializer extends StdScalarDeserializer<OffsetDateTime> {
 
-	private static final long serialVersionUID = 1L;
-
-	private transient DateTimeFormatter formatter;
+	private final DateTimeFormatter formatter;
 
 	/**
 	 * Flexible formatter that handles:

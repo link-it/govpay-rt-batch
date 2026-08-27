@@ -3,7 +3,9 @@ package it.govpay.rt.batch.unit.listener;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,11 +26,13 @@ class BatchExecutionRecapListenerTest {
     @Mock
     private JobExecution jobExecution;
 
+    private static final Clock CLOCK = Clock.system(ZoneId.of("Europe/Rome"));
+
     private BatchExecutionRecapListener listener;
 
     @BeforeEach
     void setUp() {
-        listener = new BatchExecutionRecapListener();
+        listener = new BatchExecutionRecapListener(CLOCK);
     }
 
     @Nested

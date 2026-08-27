@@ -274,13 +274,6 @@ public class EventoRtMapper {
     }
 
     /**
-     * Extracts error information from exception and sets outcome (KO or FAIL).
-     *
-     * @param responseEntity Response entity
-     * @param exception      Exception
-     * @param nuovoEvento    Event to update
-     */
-    /**
      * Extracts the HTTP status code from a WebServiceTransportException message (e.g., " [401]").
      * Falls back to 500 if the status code cannot be parsed.
      */
@@ -292,6 +285,13 @@ public class EventoRtMapper {
         return 500;
     }
 
+    /**
+     * Extracts error information from exception and sets outcome (KO or FAIL).
+     *
+     * @param responseEntity Response entity
+     * @param exception      Exception
+     * @param nuovoEvento    Event to update
+     */
     private void extractExceptionInfo(ResponseEntity<?> responseEntity, RestClientException exception,
                                       NuovoEvento nuovoEvento) {
         if (exception != null) {

@@ -43,6 +43,7 @@ import it.govpay.common.batch.dto.Problem;
 import it.govpay.common.batch.runner.JobExecutionHelper;
 import it.govpay.common.batch.service.JobConcurrencyService;
 import it.govpay.rt.batch.Costanti;
+import it.govpay.rt.batch.config.BatchControllerSupport;
 import it.govpay.rt.batch.service.RtApiService;
 import jakarta.persistence.EntityManager;
 
@@ -79,8 +80,9 @@ class BatchControllerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(jobExecutionHelper.getJobConcurrencyService()).thenReturn(jobConcurrencyService);
-        batchController = new BatchController(jobExecutionHelper, jobRepository, rtRetrieveJob,
-                rtApiService, environment, ZONE_ID, SCHEDULER_INTERVAL_MILLIS, entityManager);
+        BatchControllerSupport support = new BatchControllerSupport(jobExecutionHelper, jobRepository,
+                environment, ZONE_ID, SCHEDULER_INTERVAL_MILLIS, entityManager);
+        batchController = new BatchController(support, rtRetrieveJob, rtApiService);
     }
 
     private JobExecution createJobExecution(String clusterId, BatchStatus status) {

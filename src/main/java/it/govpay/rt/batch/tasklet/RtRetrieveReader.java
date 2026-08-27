@@ -1,6 +1,7 @@
 package it.govpay.rt.batch.tasklet;
 
 import java.math.BigInteger;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExecutionListener {
 
     private final RendicontazioniRepository rndRepository;
+    private final Clock clock;
     private final int finestraTemporale;
     private final long lastProcessedId;
 
@@ -32,9 +34,11 @@ public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExec
 
     public RtRetrieveReader(
     		RendicontazioniRepository rndRepository,
+    		Clock clock,
     		@Value("${govpay.batch.finestra-temporale:90}") int finestraTemporale,
     		@Value("#{jobExecutionContext['lastProcessedId'] ?: 0}") long lastProcessedId) {
         this.rndRepository = rndRepository;
+        this.clock = clock;
         this.finestraTemporale = finestraTemporale;
         this.lastProcessedId = lastProcessedId;
     }
@@ -42,7 +46,7 @@ public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExec
     @BeforeStep
     public void initToBeRetrieve() {
 		toBeRetrieveList = new ArrayList<>();
-		LocalDateTime dataLimite = LocalDateTime.now().minusDays(finestraTemporale);
+		LocalDateTime dataLimite = LocalDateTime.now(clock).minusDays(finestraTemporale);
 		List<Object[]> rndInfos = lastProcessedId > 0L ? rndRepository.findRendicontazioneWithNoPagamentoAfterId(lastProcessedId, dataLimite )
 		                                               : rndRepository.findRendicontazioneWithNoPagamento(dataLimite);
 		log.info("Trovate {} ricevute da recuperare", rndInfos.size());

@@ -5,7 +5,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.math.BigInteger;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +31,7 @@ class RtRetrieveReaderTest {
     private RendicontazioniRepository rndRepository;
 
     private static final int FINESTRA_TEMPORALE = 30;
+    private static final Clock CLOCK = Clock.system(ZoneId.of("Europe/Rome"));
 
     private static final String TAX_CODE_1 = "12345678901";
     private static final String TAX_CODE_2 = "98765432101";
@@ -44,7 +47,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should query repository without lastProcessedId when lastProcessedId is 0")
         void shouldQueryRepositoryWithoutLastProcessedIdWhenZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -57,7 +60,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should query repository with lastProcessedId when lastProcessedId > 0")
         void shouldQueryRepositoryWithLastProcessedIdWhenGreaterThanZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 100L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 100L);
             when(rndRepository.findRendicontazioneWithNoPagamentoAfterId(eq(100L), any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -70,7 +73,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should populate list with results from repository using Long ids")
         void shouldPopulateListWithResultsUsingLongIds() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
@@ -96,7 +99,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should handle BigInteger ids from repository")
         void shouldHandleBigIntegerIdsFromRepository() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUV_1, IUR_1});
@@ -118,7 +121,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return items in order and null when exhausted")
         void shouldReturnItemsInOrderAndNullWhenExhausted() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
@@ -146,7 +149,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return null immediately when no items")
         void shouldReturnNullImmediatelyWhenNoItems() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -164,7 +167,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for unsupported types")
         void shouldThrowForUnsupportedTypes() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
 
             // Create a result with an Integer (unsupported)
             List<Object[]> results = new ArrayList<>();
