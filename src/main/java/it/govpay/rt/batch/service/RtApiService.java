@@ -141,6 +141,11 @@ public class RtApiService {
 		log.debug("Recupero ricevuta per l'organizzazione {} con iur {} e iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
 		OffsetDateTime dataStart = OffsetDateTime.now(ZoneOffset.UTC);
 		OffsetDateTime dataEnd = null;
+		// getBaseUrl/resolveDomainInfo lanciano IllegalStateException se dominio/stazione/
+		// intermediario/connettore non sono censiti o configurati: si lascia propagare
+		// (comportamento invariato per lo step schedulato, RtRetrieveProcessor). Il recupero
+		// puntuale la cattura per-item in RtRecuperoProcessor, non qui: questo
+		// metodo e' condiviso con lo step schedulato, che deve restare invariato.
 		String pagoPABaseUrl = getBaseUrl(rtInfo.getTaxCode());
 
 		DomainInfo domainInfo = resolveDomainInfo(rtInfo.getTaxCode());
@@ -176,6 +181,22 @@ public class RtApiService {
 		// 200 OK: ricevuta recuperata -> salva e prosegui
 		log.debug("Recuperata ricevuta per l'organizzazione {} con iur {} e iuv {}", rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
 		PaSendRTV2Request ret = CtReceiptV2Converter.toPaSendRTV2Request(domainInfo.intermediaryId(), domainInfo.stationId(), rtInfo.getTaxCode(), response.getBody());
+
+		// Bug pagoPA noto (govpay#843): una voce senza IBAN e' per costruzione una marca da
+		// bollo (paForNode.xsd, <xsd:choice> IBAN/MBDAttachment); se manca anche l'allegato,
+		// pagoPA non l'ha restituito e la RT non e' acquisibile cosi' com'e'. Non si invia a
+		// paForNode: si segnala al chiamante riusando statusCodeFuture (stesso meccanismo del
+		// NOT_FOUND), senza cambiare la firma del metodo ne' introdurre un'eccezione dedicata
+		// che impatterebbe anche lo step schedulato.
+		if (CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(ret.getReceipt())) {
+			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
+			log.warn("Marca da bollo con allegato mancante (bug pagoPA noto) per taxCode {} - iur {} - iuv {}",
+					rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
+			statusCodeFuture.complete(HttpStatus.UNPROCESSABLE_ENTITY);
+			gdeService.saveGetReceiptMbtAllegatoMancante(rtInfo, response, dataStart, dataEnd, pagoPABaseUrl);
+			return null;
+		}
+
 		gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, pagoPABaseUrl);
 		return ret;
 	}

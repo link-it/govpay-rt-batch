@@ -225,6 +225,26 @@ class CtReceiptV2ConverterTest {
         }
 
         @Test
+        @DisplayName("issue #17 §C: IBAN vuoto (\"\") non deve essere impostato, simmetrico a MBDAttachment")
+        void shouldNotSetEmptyIban() {
+            // Caso del bug pagoPA: una marca da bollo arriva con iban="" invece di
+            // omesso. Con un controllo su null (pre-fix) questo passerebbe come
+            // un'entrata con IBAN vuoto anziche' una marca da bollo.
+            TransferPA transfer = new TransferPA();
+            transfer.setIdTransfer(1);
+            transfer.setTransferAmount(new BigDecimal("100.50"));
+            transfer.setFiscalCodePA(COD_DOMINIO);
+            transfer.setIban("");
+            transfer.setMbdAttachment("");
+            response.setTransferList(Arrays.asList(transfer));
+
+            CtReceiptV2 result = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertNull(result.getTransferList().getTransfer().get(0).getIBAN());
+            assertNull(result.getTransferList().getTransfer().get(0).getMBDAttachment());
+        }
+
+        @Test
         @DisplayName("should handle null metadata")
         void shouldHandleNullMetadata() {
             response.setMetadata(null);
@@ -251,6 +271,72 @@ class CtReceiptV2ConverterTest {
             assertEquals(2, result.getMetadata().getMapEntry().size());
             assertEquals("key1", result.getMetadata().getMapEntry().get(0).getKey());
             assertEquals("value1", result.getMetadata().getMapEntry().get(0).getValue());
+        }
+    }
+
+    @Nested
+    @DisplayName("hasTransferSenzaIbanEMbdAttachment")
+    class HasTransferSenzaIbanEMbdAttachmentTest {
+
+        @Test
+        @DisplayName("false quando IBAN presente (entrata)")
+        void falseConIban() {
+            response.setTransferList(Arrays.asList(transferCon("IT60X0542811101000000123456", null)));
+            CtReceiptV2 receipt = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertFalse(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(receipt));
+        }
+
+        @Test
+        @DisplayName("false quando MBDAttachment presente (marca da bollo con allegato)")
+        void falseConMbdAttachment() {
+            response.setTransferList(Arrays.asList(transferCon(null, "attachment-data")));
+            CtReceiptV2 receipt = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertFalse(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(receipt));
+        }
+
+        @Test
+        @DisplayName("true quando entrambi assenti (bug pagoPA: marca da bollo senza allegato)")
+        void trueQuandoEntrambiAssenti() {
+            response.setTransferList(Arrays.asList(transferCon(null, null)));
+            CtReceiptV2 receipt = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertTrue(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(receipt));
+        }
+
+        @Test
+        @DisplayName("true quando entrambi stringa vuota, non solo null (issue #17 §C, hasText)")
+        void trueQuandoEntrambiStringaVuota() {
+            response.setTransferList(Arrays.asList(transferCon("", "")));
+            CtReceiptV2 receipt = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertTrue(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(receipt));
+        }
+
+        @Test
+        @DisplayName("false quando transferList e' null")
+        void falseQuandoTransferListNull() {
+            response.setTransferList(null);
+            CtReceiptV2 receipt = CtReceiptV2Converter.toCtReceiptV2(response);
+
+            assertFalse(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(receipt));
+        }
+
+        @Test
+        @DisplayName("false quando receipt e' null")
+        void falseQuandoReceiptNull() {
+            assertFalse(CtReceiptV2Converter.hasTransferSenzaIbanEMbdAttachment(null));
+        }
+
+        private TransferPA transferCon(String iban, String mbdAttachment) {
+            TransferPA transfer = new TransferPA();
+            transfer.setIdTransfer(1);
+            transfer.setTransferAmount(new BigDecimal("100.50"));
+            transfer.setFiscalCodePA(COD_DOMINIO);
+            transfer.setIban(iban);
+            transfer.setMbdAttachment(mbdAttachment);
+            return transfer;
         }
     }
 }

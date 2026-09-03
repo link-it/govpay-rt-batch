@@ -50,6 +50,18 @@ public class RtRetrieveProcessor implements ItemProcessor<RtRetrieveContext, RtR
                                       .message("Receipt not found")
                                       .build();
         	}
+        	if (statusCodeFuture.isDone() && statusCodeFuture.get().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
+        		// Marca da bollo con allegato mancante (bug pagoPA noto, govpay#843): in pratica
+        		// non dovrebbe mai capitare qui, dato che i pagamenti di sole MBT non generano
+        		// mai un FdR e quindi non raggiungono mai la scansione automatica.
+        		return RtRetrieveBatch.builder()
+                                      .rtId(context.getRtId())
+                                      .codDominio(context.getTaxCode())
+                                      .iur(context.getIur())
+                                      .iuv(context.getIuv())
+                                      .message("MBD attachment mancante")
+                                      .build();
+        	}
         	// Non dovrebbe mai arrivare qui in quanto gli altri casi dovrebbero essere antati in eccezione
             return null;
         }

@@ -261,6 +261,18 @@ class EventoRtMapperTest {
         }
 
         @Test
+        @DisplayName("issue #17 review: setParametriRispostaSoapIdempotente should set status 200, non 409, per un fault SOAP idempotente (es. PAA_RECEIPT_DUPLICATA)")
+        void shouldSetStatus200ForIdempotentSoapResponse() {
+            NuovoEvento evento = mapper.createEvento(rtInfo, TIPO_EVENTO, TRANSACTION_ID, dataStart, dataEnd);
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            response.setOutcome(StOutcome.KO);
+
+            mapper.setParametriRispostaSoapIdempotente(evento, dataEnd, response, null);
+
+            assertEquals(BigDecimal.valueOf(200), evento.getParametriRisposta().getStatus());
+        }
+
+        @Test
         @DisplayName("createEventoKoSoap should set FAIL esito for generic exceptions")
         void shouldSetFailEsitoForGenericSoapException() {
             Exception exception = new RuntimeException("SOAP error");

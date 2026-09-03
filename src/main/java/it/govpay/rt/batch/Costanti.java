@@ -28,6 +28,13 @@ public class Costanti {
     // Nome job RT retrieve
     public static final String RT_RETRIEVE_JOB_NAME = "rtRetrieveJob";
 
+    // Recupero puntuale: valori di rt_recuperi.esito scritti da questo batch.
+    // NON_DISPONIBILE e' letto anche da console-api: stesso valore, non
+    // rinominare senza coordinarsi sull'altro repo.
+    public static final String ESITO_RECUPERO_NON_DISPONIBILE = "NON_DISPONIBILE";
+    public static final String ESITO_RECUPERO_MBT_ALLEGATO_MANCANTE = "MBT_ALLEGATO_MANCANTE";
+    public static final String ESITO_RECUPERO_ERRORE = "ERRORE";
+
     private Costanti() {
         // Costruttore privato per evitare istanziazione
     }

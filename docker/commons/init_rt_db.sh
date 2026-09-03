@@ -258,7 +258,6 @@ java ${INVOCAZIONE_CLIENT} \
 SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 ${START_TRANSACTION}
 \i /tmp/rt_sql/tabelle_batch-create.sql
-\i /tmp/rt_sql/create-db.sql
 COMMIT;
 EOSQL
 
