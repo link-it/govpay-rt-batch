@@ -133,5 +133,24 @@ class PaForNodeServiceTest {
             verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
         }
+
+        @Test
+        @DisplayName("issue #59 §10 / #17 §D: should return true and save evento dedicato quando il fault e' PAA_RECEIPT_DUPLICATA")
+        void shouldReturnTrueAndSaveDuplicataEventWhenFaultIsPaaReceiptDuplicata() {
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            response.setOutcome(StOutcome.KO);
+            CtFaultBean fault = new CtFaultBean();
+            fault.setFaultCode("PAA_RECEIPT_DUPLICATA");
+            fault.setDescription("La ricevuta e' gia' stata acquisita");
+            response.setFault(fault);
+            when(govpayClient.sendReceipt(request)).thenReturn(response);
+
+            boolean result = service.sendReceipt(rtInfo, request);
+
+            assertTrue(result);
+            verify(gdeService).saveSendReceiptDuplicata(eq(rtInfo), eq(request), eq(response), any(), any());
+            verify(gdeService, never()).saveSendReceiptKo(any(), any(), any(), any(), any());
+            verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
+        }
     }
 }

@@ -43,6 +43,30 @@ public class CtReceiptV2Converter {
 		return paSendRTV2Request;
 	}
 
+	/**
+	 * Discriminante deterministico per il bug pagoPA:
+	 * {@code paForNode.xsd} rende {@code IBAN}/{@code MBDAttachment} mutuamente
+	 * esclusivi e obbligatori uno dei due ({@code <xsd:choice>} senza
+	 * {@code minOccurs="0"}), quindi un transfer senza IBAN e' per costruzione
+	 * una marca da bollo — se manca anche {@code MBDAttachment}, pagoPA non ha
+	 * restituito l'allegato e la RT non e' acquisibile cosi' com'e' (verrebbe
+	 * inviata a paForNode priva sia di IBAN sia di allegato, violando la choice).
+	 * Va chiamato **dopo** {@link #toCtTransferListPAReceiptV2}, che gia' applica
+	 * {@code hasText} in modo simmetrico su entrambi i campi: qui basta il
+	 * controllo di nullita' sui valori gia' convertiti.
+	 */
+	public static boolean hasTransferSenzaIbanEMbdAttachment(CtReceiptV2 receipt) {
+		if (receipt == null || receipt.getTransferList() == null) {
+			return false;
+		}
+		for (CtTransferPAReceiptV2 transfer : receipt.getTransferList().getTransfer()) {
+			if (transfer.getIBAN() == null && transfer.getMBDAttachment() == null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static CtReceiptV2 toCtReceiptV2(CtReceiptModelResponse response) {
 		CtReceiptV2 ctReceiptV2 = new CtReceiptV2();
 
@@ -92,12 +116,18 @@ public class CtReceiptV2Converter {
 
 			//ctTransferPAReceiptV2.setCompanyName(TransferPA.getCompanyName()) NON PRESENTE
 			ctTransferPAReceiptV2.setFiscalCodePA(TransferPA.getFiscalCodePA());
-			ctTransferPAReceiptV2.setIBAN(TransferPA.getIban());
 			ctTransferPAReceiptV2.setIdTransfer(TransferPA.getIdTransfer());
-			// getMbdAttachment() e' annotato @Nonnull dal generatore OpenAPI, quindi il
-			// solo controllo di nullita' non discrimina mai: l'allegato MBD va comunque
-			// valorizzato solo quando presente, ed e' l'assenza di contenuto a doverlo
-			// escludere. hasText() copre entrambi i casi (null e stringa vuota/blank).
+			// getIban()/getMbdAttachment() sono annotati @Nonnull dal generatore OpenAPI
+			// (lo schema BizEvents li dichiara entrambi required), quindi il solo controllo
+			// di nullita' non discrimina mai: pagoPA manda una stringa vuota per il campo
+			// che non si applica alla voce (iban per una marca da bollo, mbdAttachment per
+			// un'entrata). paForNode.xsd rende i due campi mutuamente esclusivi
+			// (<xsd:choice>): un setIBAN("") incondizionato soddisfarebbe la choice
+			// mentendo (voce che sembra un'entrata con IBAN vuoto invece di una marca da
+			// bollo). Simmetrico su entrambi i campi, hasText() copre null e stringa vuota/blank.
+			if (StringUtils.hasText(TransferPA.getIban())) {
+				ctTransferPAReceiptV2.setIBAN(TransferPA.getIban());
+			}
 			if (StringUtils.hasText(TransferPA.getMbdAttachment())) {
 				ctTransferPAReceiptV2.setMBDAttachment(TransferPA.getMbdAttachment().getBytes(StandardCharsets.UTF_8));
 			}

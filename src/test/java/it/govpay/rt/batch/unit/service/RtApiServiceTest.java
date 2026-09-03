@@ -72,7 +72,7 @@ class RtApiServiceTest {
     class RetrieveReceiptTest {
 
         @Test
-        @DisplayName("should throw when no intermediario found for domain")
+        @DisplayName("should throw when no intermediario found for domain (comportamento invariato: propagato, gestito solo dallo step puntuale)")
         void shouldThrowWhenNoIntermediarioFound() {
             when(intermediarioRepository.findByCodDominio(TAX_CODE))
                     .thenReturn(Optional.empty());
@@ -82,7 +82,7 @@ class RtApiServiceTest {
         }
 
         @Test
-        @DisplayName("should throw when connettore RT not configured")
+        @DisplayName("should throw when connettore RT not configured (comportamento invariato: propagato, gestito solo dallo step puntuale)")
         void shouldThrowWhenConnettoreRtNotConfigured() {
             IntermediarioEntity intermediario = IntermediarioEntity.builder()
                     .codIntermediario(INTERMEDIARY_ID)

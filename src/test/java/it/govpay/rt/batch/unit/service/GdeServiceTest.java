@@ -162,6 +162,40 @@ class GdeServiceTest {
             verify(eventoRtMapper).setParametriRisposta(eq(mockEvento), eq(dataEnd), eq(response), isNull());
             verify(gdeRestTemplate).postForEntity(eq(GDE_ENDPOINT), eq(mockEvento), eq(Void.class));
         }
+
+        @Test
+        @DisplayName("issue #17 review: annota l'operatore nel dettaglioEsito quando rt_recuperi.id_operatore e' valorizzato")
+        void shouldAppendOperatoreToDettaglioEsitoWhenPresent() {
+            setupGdeEnabled();
+            RtRetrieveContext rtInfoConOperatore = RtRetrieveContext.builder()
+                    .rtId(1L).taxCode(TAX_CODE).iuv(IUV).iur(IUR).idOperatore(42L).build();
+            ResponseEntity<String> response = ResponseEntity.ok("receipt data");
+            NuovoEvento mockEvento = new NuovoEvento();
+            mockEvento.setEsito(EsitoEvento.OK);
+
+            when(eventoRtMapper.createEventoOk(eq(rtInfoConOperatore), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
+                    .thenReturn(mockEvento);
+
+            gdeService.saveGetReceiptOk(rtInfoConOperatore, response, dataStart, dataEnd, PAGOPA_BASE_URL);
+
+            assertEquals("Recupero richiesto da operatore #42.", mockEvento.getDettaglioEsito());
+        }
+
+        @Test
+        @DisplayName("nessuna annotazione quando idOperatore e' assente (scansione automatica)")
+        void shouldNotAppendOperatoreWhenAbsent() {
+            setupGdeEnabled();
+            ResponseEntity<String> response = ResponseEntity.ok("receipt data");
+            NuovoEvento mockEvento = new NuovoEvento();
+            mockEvento.setEsito(EsitoEvento.OK);
+
+            when(eventoRtMapper.createEventoOk(eq(rtInfo), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
+                    .thenReturn(mockEvento);
+
+            gdeService.saveGetReceiptOk(rtInfo, response, dataStart, dataEnd, PAGOPA_BASE_URL);
+
+            assertNull(mockEvento.getDettaglioEsito());
+        }
     }
 
     @Nested

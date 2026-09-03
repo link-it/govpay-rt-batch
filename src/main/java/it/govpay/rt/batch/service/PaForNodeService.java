@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Request;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
+import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.CtFaultBean;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
 import it.govpay.rt.batch.client.GovpayClient;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
@@ -19,6 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class PaForNodeService {
+
+	/**
+	 * Fault restituito da api-pagopa quando la RT e' gia' stata acquisita: e'
+	 * l'esito normale di una richiesta ripetuta, non
+	 * un errore. Capita in particolare quando la riga rt_recuperi viene
+	 * eliminata dopo l'invio invece che prima (§10: "fra i due rischi si
+	 * sceglie il secondo"), e al giro successivo si rimanda la stessa ricevuta.
+	 */
+	private static final String FAULT_CODE_RECEIPT_DUPLICATA = "PAA_RECEIPT_DUPLICATA";
 
 	private final GdeService gdeService;
 	private final GovpayClient govpayClient;
@@ -54,6 +64,13 @@ public class PaForNodeService {
 				return true;
 			}
 
+			if (isReceiptGiaAcquisita(response.getFault())) {
+				log.info("Ricevuta gia' acquisita (PAA_RECEIPT_DUPLICATA), non e' un errore: taxCode {} - iur {} - iuv {}",
+						rtInfo.getTaxCode(), rtInfo.getIur(), rtInfo.getIuv());
+				gdeService.saveSendReceiptDuplicata(rtInfo, receiptToSend, response, dataStart, dataEnd);
+				return true;
+			}
+
 			gdeService.saveSendReceiptKo(rtInfo, receiptToSend,
 					new IllegalStateException("Outcome KO: " + response.getFault()), dataStart, dataEnd);
 			return false;
@@ -63,6 +80,10 @@ public class PaForNodeService {
 			gdeService.saveSendReceiptKo(rtInfo, receiptToSend, e, dataStart, dataEnd);
 			return false;
 		}
+	}
+
+	private static boolean isReceiptGiaAcquisita(CtFaultBean fault) {
+		return fault != null && FAULT_CODE_RECEIPT_DUPLICATA.equals(fault.getFaultCode());
 	}
 
 }

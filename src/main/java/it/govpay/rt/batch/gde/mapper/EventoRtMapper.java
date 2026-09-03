@@ -231,6 +231,37 @@ public class EventoRtMapper {
     }
 
     /**
+     * Sets response details per un esito SOAP idempotente (es.
+     * {@code PAA_RECEIPT_DUPLICATA}): la richiesta era valida e la risorsa e'
+     * gia' nello stato desiderato, quindi e' un successo, non un errore.
+     * Dedicato apposta invece di riusare
+     * {@link #setParametriRispostaSoap}, che tratta qualunque outcome diverso
+     * da {@code OK} come un errore di trasporto (status 500).
+     *
+     * <p>Status **200**, non 409: un 4xx resta nella classe degli errori HTTP
+     * per chiunque consumi il giornale eventi filtrando/contando per fascia di
+     * status (review del 2026-09-03), e sarebbe comunque un valore inventato —
+     * la chiamata SOAP non ha uno status HTTP reale da riportare qui. La
+     * distinzione fra "successo fresco" e "duplicato idempotente" resta
+     * affidata a {@code sottotipoEsito}/{@code dettaglioEsito} (impostati dal
+     * chiamante) e al fault serializzato nel payload dell'evento.
+     *
+     * @param nuovoEvento      Event to update
+     * @param dataEnd          Response timestamp
+     * @param response         SOAP response con il fault di duplicazione
+     * @param responseHeaders  SOAP response headers
+     */
+    public void setParametriRispostaSoapIdempotente(NuovoEvento nuovoEvento, OffsetDateTime dataEnd,
+                                                     PaSendRTV2Response response, List<Header> responseHeaders) {
+        DettaglioRisposta dettaglioRisposta = new DettaglioRisposta();
+        dettaglioRisposta.setDataOraRisposta(dataEnd);
+        dettaglioRisposta.setHeaders(responseHeaders != null ? responseHeaders : new ArrayList<>());
+        dettaglioRisposta.setStatus(BigDecimal.valueOf(200));
+
+        nuovoEvento.setParametriRisposta(dettaglioRisposta);
+    }
+
+    /**
      * Sets response details for failed SOAP operations.
      *
      * @param nuovoEvento      Event to update
