@@ -38,6 +38,7 @@ import it.govpay.gde.client.beans.NuovoEvento;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 import it.govpay.rt.batch.gde.service.GdeService;
+import it.govpay.rt.batch.service.OperatorePrincipalResolver;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GdeService")
@@ -58,6 +59,9 @@ class GdeServiceTest {
     @Mock
     private RestTemplate gdeRestTemplate;
 
+    @Mock
+    private OperatorePrincipalResolver operatorePrincipalResolver;
+
     // Use synchronous executor for predictable test execution
     private final Executor syncExecutor = Runnable::run;
 
@@ -76,7 +80,7 @@ class GdeServiceTest {
     @BeforeEach
     void setUp() {
         gdeService = new GdeService(objectMapper, syncExecutor, configurazioneService,
-                eventoRtMapper, jaxb2Marshaller);
+                eventoRtMapper, jaxb2Marshaller, operatorePrincipalResolver);
         ReflectionTestUtils.setField(gdeService, "govpayUrl", GOVPAY_URL);
 
         rtInfo = RtRetrieveContext.builder()
@@ -164,8 +168,8 @@ class GdeServiceTest {
         }
 
         @Test
-        @DisplayName("issue #17 review: annota l'operatore nel dettaglioEsito quando rt_recuperi.id_operatore e' valorizzato")
-        void shouldAppendOperatoreToDettaglioEsitoWhenPresent() {
+        @DisplayName("annota il principal nel dettaglioEsito quando l'operatore e' risolvibile")
+        void shouldAppendOperatorePrincipalToDettaglioEsitoWhenResolvable() {
             setupGdeEnabled();
             RtRetrieveContext rtInfoConOperatore = RtRetrieveContext.builder()
                     .rtId(1L).taxCode(TAX_CODE).iuv(IUV).iur(IUR).idOperatore(42L).build();
@@ -175,6 +179,26 @@ class GdeServiceTest {
 
             when(eventoRtMapper.createEventoOk(eq(rtInfoConOperatore), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
                     .thenReturn(mockEvento);
+            when(operatorePrincipalResolver.resolve(42L)).thenReturn("u-operatore");
+
+            gdeService.saveGetReceiptOk(rtInfoConOperatore, response, dataStart, dataEnd, PAGOPA_BASE_URL);
+
+            assertEquals("Recupero richiesto da operatore u-operatore.", mockEvento.getDettaglioEsito());
+        }
+
+        @Test
+        @DisplayName("annota il solo id nel dettaglioEsito quando l'operatore non e' risolvibile (riga orfana)")
+        void shouldAppendOperatoreIdToDettaglioEsitoWhenNotResolvable() {
+            setupGdeEnabled();
+            RtRetrieveContext rtInfoConOperatore = RtRetrieveContext.builder()
+                    .rtId(1L).taxCode(TAX_CODE).iuv(IUV).iur(IUR).idOperatore(42L).build();
+            ResponseEntity<String> response = ResponseEntity.ok("receipt data");
+            NuovoEvento mockEvento = new NuovoEvento();
+            mockEvento.setEsito(EsitoEvento.OK);
+
+            when(eventoRtMapper.createEventoOk(eq(rtInfoConOperatore), anyString(), anyString(), eq(dataStart), eq(dataEnd)))
+                    .thenReturn(mockEvento);
+            when(operatorePrincipalResolver.resolve(42L)).thenReturn(null);
 
             gdeService.saveGetReceiptOk(rtInfoConOperatore, response, dataStart, dataEnd, PAGOPA_BASE_URL);
 
