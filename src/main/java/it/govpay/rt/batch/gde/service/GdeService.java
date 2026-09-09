@@ -34,6 +34,7 @@ import it.govpay.rt.batch.client.SoapGdeCapturingInterceptor;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.mapper.EventoRtMapper;
 import it.govpay.rt.batch.gde.utils.RtGdeUtils;
+import it.govpay.rt.batch.service.OperatorePrincipalResolver;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -56,6 +57,7 @@ public class GdeService extends AbstractGdeService {
     private final EventoRtMapper eventoRtMapper;
     private final ConfigurazioneService configurazioneService;
     private final Jaxb2Marshaller jaxb2Marshaller;
+    private final OperatorePrincipalResolver operatorePrincipalResolver;
 
     @Value("${govpay.url}")
     private String govpayUrl;
@@ -64,11 +66,13 @@ public class GdeService extends AbstractGdeService {
                       @Qualifier("asyncHttpExecutor") Executor asyncHttpExecutor,
                       ConfigurazioneService configurazioneService,
                       EventoRtMapper eventoRtMapper,
-                      Jaxb2Marshaller jaxb2Marshaller) {
+                      Jaxb2Marshaller jaxb2Marshaller,
+                      OperatorePrincipalResolver operatorePrincipalResolver) {
         super(objectMapper, asyncHttpExecutor, configurazioneService);
         this.eventoRtMapper = eventoRtMapper;
         this.configurazioneService = configurazioneService;
         this.jaxb2Marshaller = jaxb2Marshaller;
+        this.operatorePrincipalResolver = operatorePrincipalResolver;
     }
 
     @Override
@@ -330,19 +334,21 @@ public class GdeService extends AbstractGdeService {
     /**
      * {@code NuovoEvento} (govpay-common) non espone un campo strutturato per l'operatore
      * che ha richiesto il recupero puntuale, anche se {@code rt_recuperi.id_operatore} esiste
-     * apposta per questo. In attesa di un'evoluzione coordinata del contratto GDE, 
-     * l'informazione si annota in coda al  {@code dettaglioEsito} come testo libero —
-     * non interrogabile, ma non persa. Nessun effetto per la scansione automatica:
-     * {@code idOperatore} e' sempre null li'.
+     * apposta per questo. In attesa di un'evoluzione coordinata del contratto GDE,
+     * l'informazione si annota in coda al {@code dettaglioEsito} come testo libero —
+     * non interrogabile, ma non persa. Il principal risolto via
+     * {@link OperatorePrincipalResolver} e' preferito al solo id quando disponibile;
+     * nessun effetto per la scansione automatica: {@code idOperatore} e' sempre null li'.
      */
-    private static void appendOperatore(NuovoEvento nuovoEvento, RtRetrieveContext rtInfo) {
+    private void appendOperatore(NuovoEvento nuovoEvento, RtRetrieveContext rtInfo) {
         if (rtInfo == null || rtInfo.getIdOperatore() == null) {
             return;
         }
-        String nota = "Recupero richiesto da operatore #" + rtInfo.getIdOperatore() + ".";
+        String principal = operatorePrincipalResolver.resolve(rtInfo.getIdOperatore());
+        String nota = principal != null ? "Recupero richiesto da operatore " + principal + "."
+        								: "Recupero richiesto da operatore #" + rtInfo.getIdOperatore() + ".";
         String dettaglio = nuovoEvento.getDettaglioEsito();
-        nuovoEvento.setDettaglioEsito(
-                dettaglio != null && !dettaglio.isBlank() ? dettaglio + " " + nota : nota);
+        nuovoEvento.setDettaglioEsito( dettaglio != null && !dettaglio.isBlank() ? dettaglio + " " + nota : nota );
     }
 
     /**

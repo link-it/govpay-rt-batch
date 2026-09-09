@@ -32,10 +32,13 @@ public class PaForNodeService {
 
 	private final GdeService gdeService;
 	private final GovpayClient govpayClient;
+	private final OperatorePrincipalResolver operatorePrincipalResolver;
 
-	public PaForNodeService(GdeService gdeService, GovpayClient govpayClient) {
+	public PaForNodeService(GdeService gdeService, GovpayClient govpayClient,
+			OperatorePrincipalResolver operatorePrincipalResolver) {
 		this.gdeService = gdeService;
 		this.govpayClient = govpayClient;
+		this.operatorePrincipalResolver = operatorePrincipalResolver;
 	}
 
 	public boolean sendReceipt(RtRetrieveContext rtInfo, PaSendRTV2Request receiptToSend) {
@@ -43,9 +46,10 @@ public class PaForNodeService {
 
 		OffsetDateTime dataStart = OffsetDateTime.now(ZoneOffset.UTC);
 		OffsetDateTime dataEnd = null;
+		String onBehalfOf = operatorePrincipalResolver.resolve(rtInfo.getIdOperatore());
 
 		try {
-			PaSendRTV2Response response = govpayClient.sendReceipt(receiptToSend);
+			PaSendRTV2Response response = govpayClient.sendReceipt(receiptToSend, onBehalfOf);
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
 
 			// govpayClient restituisce null quando la richiesta non e' valorizzata:

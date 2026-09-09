@@ -19,6 +19,7 @@ import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
 import it.govpay.rt.batch.client.GovpayClient;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.service.GdeService;
+import it.govpay.rt.batch.service.OperatorePrincipalResolver;
 import it.govpay.rt.batch.service.PaForNodeService;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +32,9 @@ class PaForNodeServiceTest {
     @Mock
     private GovpayClient govpayClient;
 
+    @Mock
+    private OperatorePrincipalResolver operatorePrincipalResolver;
+
     private PaForNodeService service;
     private RtRetrieveContext rtInfo;
     private PaSendRTV2Request request;
@@ -41,7 +45,7 @@ class PaForNodeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PaForNodeService(gdeService, govpayClient);
+        service = new PaForNodeService(gdeService, govpayClient, operatorePrincipalResolver);
 
         rtInfo = RtRetrieveContext.builder()
                 .rtId(1L)
@@ -62,12 +66,12 @@ class PaForNodeServiceTest {
         void shouldReturnTrueWhenResponseIsOk() {
             PaSendRTV2Response response = new PaSendRTV2Response();
             response.setOutcome(StOutcome.OK);
-            when(govpayClient.sendReceipt(request)).thenReturn(response);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
             assertTrue(result);
-            verify(govpayClient).sendReceipt(request);
+            verify(govpayClient).sendReceipt(request, null);
             verify(gdeService).saveSendReceiptOk(eq(rtInfo), eq(request), eq(response), any(), any());
             verify(gdeService, never()).saveSendReceiptKo(any(), any(), any(), any(), any());
         }
@@ -81,12 +85,12 @@ class PaForNodeServiceTest {
             fault.setFaultCode("PAA_ERROR");
             fault.setDescription("Payment error");
             response.setFault(fault);
-            when(govpayClient.sendReceipt(request)).thenReturn(response);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
             assertFalse(result);
-            verify(govpayClient).sendReceipt(request);
+            verify(govpayClient).sendReceipt(request, null);
             verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
         }
@@ -95,12 +99,12 @@ class PaForNodeServiceTest {
         @DisplayName("should return false and save KO event when exception occurs")
         void shouldReturnFalseWhenExceptionOccurs() {
             RuntimeException exception = new RuntimeException("Connection error");
-            when(govpayClient.sendReceipt(request)).thenThrow(exception);
+            when(govpayClient.sendReceipt(request, null)).thenThrow(exception);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
             assertFalse(result);
-            verify(govpayClient).sendReceipt(request);
+            verify(govpayClient).sendReceipt(request, null);
             verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), eq(exception), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
         }
@@ -110,12 +114,12 @@ class PaForNodeServiceTest {
         void shouldReturnFalseWhenResponseIsNull() {
             // GovpayClient restituisce null quando la richiesta non e' valorizzata:
             // il servizio non deve dereferenziare la response.
-            when(govpayClient.sendReceipt(request)).thenReturn(null);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(null);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
             assertFalse(result);
-            verify(govpayClient).sendReceipt(request);
+            verify(govpayClient).sendReceipt(request, null);
             verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
         }
@@ -125,7 +129,7 @@ class PaForNodeServiceTest {
         void shouldReturnFalseWhenOutcomeIsNull() {
             PaSendRTV2Response response = new PaSendRTV2Response();
             response.setOutcome(null);
-            when(govpayClient.sendReceipt(request)).thenReturn(response);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
@@ -143,7 +147,7 @@ class PaForNodeServiceTest {
             fault.setFaultCode("PAA_RECEIPT_DUPLICATA");
             fault.setDescription("La ricevuta e' gia' stata acquisita");
             response.setFault(fault);
-            when(govpayClient.sendReceipt(request)).thenReturn(response);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
 
             boolean result = service.sendReceipt(rtInfo, request);
 
@@ -151,6 +155,22 @@ class PaForNodeServiceTest {
             verify(gdeService).saveSendReceiptDuplicata(eq(rtInfo), eq(request), eq(response), any(), any());
             verify(gdeService, never()).saveSendReceiptKo(any(), any(), any(), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should resolve idOperatore to a principal and pass it as onBehalfOf")
+        void shouldPassResolvedPrincipalAsOnBehalfOf() {
+            RtRetrieveContext rtInfoConOperatore = RtRetrieveContext.builder()
+                    .rtId(1L).taxCode(TAX_CODE).iuv(IUV).iur(IUR).idOperatore(42L).build();
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            response.setOutcome(StOutcome.OK);
+            when(operatorePrincipalResolver.resolve(42L)).thenReturn("u-operatore");
+            when(govpayClient.sendReceipt(request, "u-operatore")).thenReturn(response);
+
+            boolean result = service.sendReceipt(rtInfoConOperatore, request);
+
+            assertTrue(result);
+            verify(govpayClient).sendReceipt(request, "u-operatore");
         }
     }
 }
