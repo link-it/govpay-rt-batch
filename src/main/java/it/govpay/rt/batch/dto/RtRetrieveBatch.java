@@ -17,4 +17,11 @@ public class RtRetrieveBatch {
     private String iur;
     private LocalDateTime retrivedTime;
     private String message;
+    /**
+     * true per un esito transitorio (es. 404 "Receipt not found"): il writer
+     * non disabilita {@code esegui_recupero_rt}, la riga resta candidata al
+     * prossimo giro schedulato. Default false: ogni altro esito e' terminale.
+     */
+    @Builder.Default
+    private boolean retryable = false;
 }

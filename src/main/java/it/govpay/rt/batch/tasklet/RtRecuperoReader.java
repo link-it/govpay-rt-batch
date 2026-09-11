@@ -17,9 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Reader per il recupero puntuale: righe di {@code rt_recuperi}
  * con {@code esito IS NULL}. A differenza di {@link RtRetrieveReader} nessuna
- * finestra temporale e nessun {@code lastProcessedId}: una richiesta esplicita
- * dell'operatore vale a prescindere dall'eta' del pagamento, ed e' una
- * sorgente indipendente dal watermark della scansione su {@code rendicontazioni}.
+ * finestra temporale: una richiesta esplicita dell'operatore vale a
+ * prescindere dall'eta' del pagamento, ed e' una sorgente indipendente dalla
+ * scansione su {@code rendicontazioni}.
  */
 @Component
 @StepScope

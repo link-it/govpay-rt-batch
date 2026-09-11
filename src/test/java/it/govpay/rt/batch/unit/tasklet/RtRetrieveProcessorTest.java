@@ -109,6 +109,9 @@ class RtRetrieveProcessorTest {
             assertEquals(RT_ID, result.getRtId());
             assertEquals("Receipt not found", result.getMessage());
             assertNull(result.getRetrivedTime());
+            // govpay-rt-batch#21 punto 3: transitorio, il writer non deve disabilitare
+            // esegui_recupero_rt per questo esito.
+            assertTrue(result.isRetryable());
         }
 
         @Test

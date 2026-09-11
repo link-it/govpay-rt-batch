@@ -45,35 +45,47 @@ class RtRetrieveReaderTest {
     class InitToBeRetrieveTest {
 
         @Test
-        @DisplayName("should query repository without lastProcessedId when lastProcessedId is 0")
-        void shouldQueryRepositoryWithoutLastProcessedIdWhenZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+        @DisplayName("should query repository for the full temporal window, no watermark")
+        void shouldQueryRepositoryForFullWindow() {
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
             reader.initToBeRetrieve();
 
             verify(rndRepository).findRendicontazioneWithNoPagamento(any(LocalDateTime.class));
-            verify(rndRepository, never()).findRendicontazioneWithNoPagamentoAfterId(anyLong(), any());
         }
 
         @Test
-        @DisplayName("should query repository with lastProcessedId when lastProcessedId > 0")
-        void shouldQueryRepositoryWithLastProcessedIdWhenGreaterThanZero() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 100L);
-            when(rndRepository.findRendicontazioneWithNoPagamentoAfterId(eq(100L), any(LocalDateTime.class)))
+        @DisplayName("should count candidates excluded by the temporal window with the same dataLimite (govpay-rt-batch#21 punto 2)")
+        void shouldCountCandidatesExcludedByWindow() {
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
+            when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
+            when(rndRepository.countRendicontazioneEsclusaDallaFinestra(any(LocalDateTime.class)))
+                    .thenReturn(3L);
 
-            reader.initToBeRetrieve();
+            assertDoesNotThrow(reader::initToBeRetrieve);
 
-            verify(rndRepository).findRendicontazioneWithNoPagamentoAfterId(eq(100L), any(LocalDateTime.class));
-            verify(rndRepository, never()).findRendicontazioneWithNoPagamento(any());
+            verify(rndRepository).countRendicontazioneEsclusaDallaFinestra(any(LocalDateTime.class));
+        }
+
+        @Test
+        @DisplayName("should not fail when no candidates are excluded by the window")
+        void shouldNotFailWhenNothingExcludedByWindow() {
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
+            when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
+                    .thenReturn(Collections.emptyList());
+            when(rndRepository.countRendicontazioneEsclusaDallaFinestra(any(LocalDateTime.class)))
+                    .thenReturn(0L);
+
+            assertDoesNotThrow(reader::initToBeRetrieve);
         }
 
         @Test
         @DisplayName("should populate list with results from repository using Long ids")
         void shouldPopulateListWithResultsUsingLongIds() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
@@ -99,7 +111,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should handle BigInteger ids from repository")
         void shouldHandleBigIntegerIdsFromRepository() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUV_1, IUR_1});
@@ -121,7 +133,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return items in order and null when exhausted")
         void shouldReturnItemsInOrderAndNullWhenExhausted() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
             results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
@@ -149,7 +161,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should return null immediately when no items")
         void shouldReturnNullImmediatelyWhenNoItems() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(Collections.emptyList());
 
@@ -167,7 +179,7 @@ class RtRetrieveReaderTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for unsupported types")
         void shouldThrowForUnsupportedTypes() {
-            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE, 0L);
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             // Create a result with an Integer (unsupported)
             List<Object[]> results = new ArrayList<>();
