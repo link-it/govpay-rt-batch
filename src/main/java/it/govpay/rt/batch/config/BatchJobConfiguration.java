@@ -27,7 +27,6 @@ import it.govpay.rt.batch.dto.RtRecuperoBatch;
 import it.govpay.rt.batch.dto.RtRetrieveBatch;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.listener.BatchExecutionRecapListener;
-import it.govpay.rt.batch.listener.WatermarkBootstrapListener;
 import it.govpay.rt.batch.tasklet.RtRecuperoProcessor;
 import it.govpay.rt.batch.tasklet.RtRecuperoReader;
 import it.govpay.rt.batch.tasklet.RtRecuperoRetentionTasklet;
@@ -64,12 +63,10 @@ public class BatchJobConfiguration {
         Step rtRetrieveTasklet,
         Step rtRecuperoPuntualeStep,
         Step rtRecuperoRetentionStep,
-        WatermarkBootstrapListener bootstrap,
         BatchExecutionRecapListener batchExecutionRecapListener
     ) {
         return new JobBuilder(Costanti.RT_RETRIEVE_JOB_NAME, jobRepository)
             .incrementer(new RunIdIncrementer())
-            .listener(bootstrap)
             .listener(batchExecutionRecapListener)
             .start(rtRetrieveTasklet)
             .next(rtRecuperoPuntualeStep)
@@ -139,8 +136,9 @@ public class BatchJobConfiguration {
 
     /**
      * Step: recupero puntuale su richiesta. Legge rt_recuperi, step
-     * separato da rtRetrieveTasklet: nessuna interferenza sul watermark
-     * (gia' inerte, bug tracciato in #21) ne' sulla finestra temporale.
+     * separato da rtRetrieveTasklet: nessuna interferenza con la
+     * finestra temporale ne' con il flag {@code esegui_recupero_rt}
+     * della scansione automatica.
      */
     @Bean
     public Step rtRecuperoPuntualeStep(

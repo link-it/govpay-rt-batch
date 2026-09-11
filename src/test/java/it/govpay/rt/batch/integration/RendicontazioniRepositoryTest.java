@@ -108,27 +108,6 @@ class RendicontazioniRepositoryTest {
     }
 
     @Test
-    @DisplayName("should find rendicontazione after id")
-    void shouldFindRendicontazioneAfterId() {
-        // Given: multiple rendicontazioni
-        Rendicontazione rnd1 = createTestData(IUV + "_1", IUR + "_1", null);
-        entityManager.flush();
-        Long firstId = rnd1.getId();
-
-        createTestData(TAX_CODE + "_2", IUV + "_2", IUR + "_2", null);
-        entityManager.flush();
-        entityManager.clear();
-
-        // When: query for rendicontazioni after first id
-        List<Object[]> results = rendicontazioniRepository
-                .findRendicontazioneWithNoPagamentoAfterId(firstId, DATA_LIMITE);
-
-        // Then: only the second record is found
-        assertEquals(1, results.size());
-        assertEquals(IUV + "_2", results.get(0)[2]);
-    }
-
-    @Test
     @DisplayName("should not find rendicontazione older than data limite")
     void shouldNotFindRendicontazioneOlderThanDataLimite() {
         // Given: a rendicontazione older than data limite
@@ -160,6 +139,50 @@ class RendicontazioniRepositoryTest {
 
         // Then: no records found (too old)
         assertTrue(results.isEmpty());
+
+        // And: the same row is counted as excluded by the window (govpay-rt-batch#21 punto 2)
+        assertEquals(1L, rendicontazioniRepository.countRendicontazioneEsclusaDallaFinestra(DATA_LIMITE));
+    }
+
+    @Test
+    @DisplayName("should not count a candidate still inside the temporal window")
+    void shouldNotCountCandidateInsideWindow() {
+        // Given: a rendicontazione within the window (found by createTestData, data = now)
+        createTestData(IUV, IUR, null);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(0L, rendicontazioniRepository.countRendicontazioneEsclusaDallaFinestra(DATA_LIMITE));
+    }
+
+    @Test
+    @DisplayName("should not count a row already excluded from esegui_recupero_rt")
+    void shouldNotCountRowWithEseguiRecuperoRtFalse() {
+        // Given: a rendicontazione older than the window but already disabled
+        DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
+        entityManager.persist(dominio);
+
+        Fr fr = Fr.builder().dominio(dominio).build();
+        entityManager.persist(fr);
+
+        SingoloVersamento sv = SingoloVersamento.builder().build();
+        entityManager.persist(sv);
+
+        Rendicontazione rnd = Rendicontazione.builder()
+                .fr(fr)
+                .singoloVersamento(sv)
+                .iuv(IUV)
+                .iur(IUR)
+                .data(LocalDateTime.now().minusDays(100))
+                .idPagamento(null)
+                .eseguiRecuperoRt(false)
+                .build();
+        entityManager.persist(rnd);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(0L, rendicontazioniRepository.countRendicontazioneEsclusaDallaFinestra(DATA_LIMITE));
     }
 
     @Test

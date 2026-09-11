@@ -1,6 +1,5 @@
 package it.govpay.rt.batch;
 public class Costanti {
-	public static final String LAST_PROCESSED_ID_KEY = "lastProcessedId";
 
     // Pattern date per serializzazione/deserializzazione JSON
     // Pattern con millisecondi variabili (1-9 cifre) per deserializzazione sicura da pagoPA

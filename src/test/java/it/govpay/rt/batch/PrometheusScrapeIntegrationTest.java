@@ -83,8 +83,6 @@ class PrometheusScrapeIntegrationTest {
         when(jobConcurrencyService.getCurrentRunningJobExecution(any())).thenReturn(null);
         when(rendicontazioniRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                 .thenReturn(List.of());
-        when(rendicontazioniRepository.findRendicontazioneWithNoPagamentoAfterId(any(), any(LocalDateTime.class)))
-                .thenReturn(List.of());
 
         JobExecution execution = batchScheduler.runBatchRtRetrieveJob();
         assertThat(execution).isNotNull();

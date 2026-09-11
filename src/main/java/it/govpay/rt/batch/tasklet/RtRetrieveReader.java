@@ -28,28 +28,31 @@ public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExec
     private final RendicontazioniRepository rndRepository;
     private final Clock clock;
     private final int finestraTemporale;
-    private final long lastProcessedId;
 
     private List<RtRetrieveContext> toBeRetrieveList = null;
 
     public RtRetrieveReader(
     		RendicontazioniRepository rndRepository,
     		Clock clock,
-    		@Value("${govpay.batch.finestra-temporale:90}") int finestraTemporale,
-    		@Value("#{jobExecutionContext['lastProcessedId'] ?: 0}") long lastProcessedId) {
+    		@Value("${govpay.batch.finestra-temporale:90}") int finestraTemporale) {
         this.rndRepository = rndRepository;
         this.clock = clock;
         this.finestraTemporale = finestraTemporale;
-        this.lastProcessedId = lastProcessedId;
     }
 
     @BeforeStep
     public void initToBeRetrieve() {
 		toBeRetrieveList = new ArrayList<>();
 		LocalDateTime dataLimite = LocalDateTime.now(clock).minusDays(finestraTemporale);
-		List<Object[]> rndInfos = lastProcessedId > 0L ? rndRepository.findRendicontazioneWithNoPagamentoAfterId(lastProcessedId, dataLimite )
-		                                               : rndRepository.findRendicontazioneWithNoPagamento(dataLimite);
+		List<Object[]> rndInfos = rndRepository.findRendicontazioneWithNoPagamento(dataLimite);
 		log.info("Trovate {} ricevute da recuperare", rndInfos.size());
+
+		long escluseDallaFinestra = rndRepository.countRendicontazioneEsclusaDallaFinestra(dataLimite);
+		if (escluseDallaFinestra > 0) {
+			log.warn("{} rendicontazioni con esegui_recupero_rt=true escluse dalla scansione perche' "
+					+ "fuori dalla finestra temporale di {} giorni: restano candidate a DB ma non verranno "
+					+ "piu' ritentate automaticamente, richiedono analisi manuale", escluseDallaFinestra, finestraTemporale);
+		}
 		for (Object[] rndInfo : rndInfos) {
 			log.debug("Ricevuta da recuperare id {}, taxCode {}, iuv {}, iur {}", rndInfo[0], rndInfo[1], rndInfo[2], rndInfo[3]);
 			RtRetrieveContext rtRetrieveCtx = RtRetrieveContext.builder()

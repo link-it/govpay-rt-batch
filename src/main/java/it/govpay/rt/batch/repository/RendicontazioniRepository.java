@@ -13,20 +13,6 @@ import it.govpay.rt.batch.entity.Rendicontazione;
 
 @Repository
 public interface RendicontazioniRepository extends JpaRepository<Rendicontazione, Long> {
-	@Query("SELECT r.id, d.codDominio, r.iuv, r.iur " +
-	              "FROM Rendicontazione r " +
-	                   "JOIN r.singoloVersamento sv " +
-	                   "JOIN r.fr f " +
-	                   "JOIN f.dominio d " +
-	              "WHERE r.singoloVersamento IS NOT NULL AND " +
-	                    "r.idPagamento IS NULL AND " +
-	                    "r.eseguiRecuperoRt = true AND " +
-	                    "r.id > :ultimoIdElaborato AND " +
-	                    "r.data > :dataLimite " +
-	              "ORDER BY r.id ASC")
-    List<Object[]> findRendicontazioneWithNoPagamentoAfterId(
-    		@Param("ultimoIdElaborato") Long ultimoIdElaborato,
-    		@Param("dataLimite") LocalDateTime dataLimite);
 
     @Query("SELECT r.id, d.codDominio, r.iuv, r.iur " +
             "FROM Rendicontazione r " +
@@ -39,6 +25,23 @@ public interface RendicontazioniRepository extends JpaRepository<Rendicontazione
                   "r.data > :dataLimite " +
             "ORDER BY r.id ASC")
     List<Object[]> findRendicontazioneWithNoPagamento(@Param("dataLimite") LocalDateTime dataLimite);
+
+    /**
+     * Conta le righe candidate ({@code esegui_recupero_rt = true}, con
+     * {@code singoloVersamento} e senza {@code idPagamento}) escluse dalla
+     * SOLA finestra temporale (stessi criteri di {@link #findRendicontazioneWithNoPagamento},
+     * data invertita). Non le rimette in scansione: serve solo a rendere
+     * osservabile il fenomeno (govpay-rt-batch#21 punto 2) senza introdurre
+     * uno stato terminale in colonna, per cui servirebbe una patch DDL a monte.
+     */
+    @Query("SELECT COUNT(r) " +
+            "FROM Rendicontazione r " +
+                 "JOIN r.singoloVersamento sv " +
+            "WHERE r.singoloVersamento IS NOT NULL AND " +
+                  "r.idPagamento IS NULL AND " +
+                  "r.eseguiRecuperoRt = true AND " +
+                  "r.data <= :dataLimite")
+    long countRendicontazioneEsclusaDallaFinestra(@Param("dataLimite") LocalDateTime dataLimite);
 
     @Modifying
     @Query("UPDATE Rendicontazione r SET r.eseguiRecuperoRt = false WHERE r.id = :id")

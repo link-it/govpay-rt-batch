@@ -14,11 +14,10 @@ import java.time.OffsetDateTime;
 
 /**
  * Writer per il recupero puntuale: elimina la riga su successo,
- * la marca su esito negativo — mai il contrario di {@link RtRetrieveWriter},
- * che invece disabilita sempre la rendicontazione. Non chiama
- * {@code disableRecuperoRt} (keyed sulla rendicontazione, non pertinente qui)
- * e non scrive {@code lastProcessedId}: questo step non ha un proprio
- * watermark, ogni riga e' indipendente.
+ * la marca su esito negativo — diverso da {@link RtRetrieveWriter}, che
+ * invece disabilita la rendicontazione sugli esiti terminali. Non chiama
+ * {@code disableRecuperoRt} (keyed sulla rendicontazione, non pertinente qui):
+ * ogni riga di {@code rt_recuperi} e' indipendente.
  *
  * <p>Eliminazione/marcatura avvengono **dopo** il tentativo, nella stessa
  * transazione dell'esito (chunk(1) + {@code @Transactional}): se il batch si

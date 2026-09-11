@@ -42,12 +42,18 @@ public class RtRetrieveProcessor implements ItemProcessor<RtRetrieveContext, RtR
         PaSendRTV2Request rtV2request = rtApiService.retrieveReceipt(context, statusCodeFuture);
         if (rtV2request == null) {
         	if (statusCodeFuture.isDone() && statusCodeFuture.get().equals(HttpStatus.NOT_FOUND)) {
+                // Transitorio: la RT puo' arrivare dopo (govpay-rt-batch#21 punto 3).
+                // retryable=true -> il writer NON disabilita esegui_recupero_rt, la
+                // riga resta candidata ai prossimi giri finche' non esce dalla
+                // finestra temporale del reader (nessun contatore di tentativi
+                // dedicato, riuso della finestra come tetto implicito).
                 return RtRetrieveBatch.builder()
                                       .rtId(context.getRtId())
                                       .codDominio(context.getTaxCode())
                                       .iur(context.getIur())
                                       .iuv(context.getIuv())
                                       .message("Receipt not found")
+                                      .retryable(true)
                                       .build();
         	}
         	if (statusCodeFuture.isDone() && statusCodeFuture.get().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
