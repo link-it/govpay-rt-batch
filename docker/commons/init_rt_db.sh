@@ -215,22 +215,34 @@ log_info "Inizializzazione database in corso..."
 SQL_DIR="${GOVPAY_DB_TYPE}"
 [ "${GOVPAY_DB_TYPE}" == "mariadb" ] && SQL_DIR="mysql"
 
+# Schema dei metadati Spring Batch: file ufficiale della libreria, estratto in
+# fase di packaging in /opt/sql/spring-batch e mai modificato. Ha un file per
+# vendor, mariadb compreso, quindi qui si usa GOVPAY_DB_TYPE e non SQL_DIR.
+BATCH_SCHEMA="/opt/sql/spring-batch/schema-${GOVPAY_DB_TYPE}.sql"
+
+# Tracciabilita' di cosa contiene /opt/sql
+if [ -f /opt/sql/VERSION ]; then
+    log_info "Script SQL a bordo immagine:"
+    grep -v '^#' /opt/sql/VERSION | grep -v '^$' | while read -r riga; do log_info "  ${riga}"; done
+fi
+
 # Verifica esistenza script SQL
-SQL_FILE="/opt/sql/${SQL_DIR}/tabelle_batch-create.sql"
+SQL_FILE="${BATCH_SCHEMA}"
 if [ ! -f "${SQL_FILE}" ]; then
     log_error "Script SQL non trovato: ${SQL_FILE}"
     log_error "File disponibili in /opt/sql:"
     ls -la /opt/sql/ 2>/dev/null || echo "  directory /opt/sql non trovata"
-    if [ -d "/opt/sql/${SQL_DIR}" ]; then
-        log_error "File in /opt/sql/${SQL_DIR}:"
-        ls -la "/opt/sql/${SQL_DIR}/" 2>/dev/null
+    if [ -d /opt/sql/spring-batch ]; then
+        log_error "File in /opt/sql/spring-batch:"
+        ls -la /opt/sql/spring-batch/ 2>/dev/null
     fi
     exit 1
 fi
 
 # Copia script in posizione temporanea
 mkdir -p /tmp/rt_sql
-cp "/opt/sql/${SQL_DIR}"/*.sql /tmp/rt_sql/
+cp "/opt/sql/${SQL_DIR}"/*.sql /tmp/rt_sql/ 2>/dev/null || true
+cp "${BATCH_SCHEMA}" /tmp/rt_sql/
 log_info "Script SQL copiati in /tmp/rt_sql/"
 
 # Applica trasformazioni specifiche per vendor
@@ -257,7 +269,7 @@ java ${INVOCAZIONE_CLIENT} \
     rt_db <<EOSQL
 SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 ${START_TRANSACTION}
-\i /tmp/rt_sql/tabelle_batch-create.sql
+\i /tmp/rt_sql/schema-${GOVPAY_DB_TYPE}.sql
 COMMIT;
 EOSQL
 
