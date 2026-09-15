@@ -1,9 +1,13 @@
 package it.govpay.rt.batch.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 
@@ -20,6 +24,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -36,6 +42,9 @@ import it.govpay.common.entity.StazioneEntity;
 import it.govpay.common.repository.DominioRepository;
 import it.govpay.common.repository.IntermediarioRepository;
 import it.govpay.rt.batch.client.GovpayClient;
+import it.govpay.rt.batch.entity.Fr;
+import it.govpay.rt.batch.entity.Rendicontazione;
+import it.govpay.rt.batch.entity.SingoloVersamento;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -165,6 +174,73 @@ class RtRetrieveJobTest {
 		// Verify no REST or SOAP calls were made
 		mockRestServer.verify();
 		mockWsServer.verify();
+	}
+
+	/**
+	 * govpay-rt-batch#21 punto 1+3: dimostra il flusso completo su due
+	 * esecuzioni, non solo i due comportamenti isolati (processor marca
+	 * retryable, writer non disabilita) gia' coperti dagli unit test.
+	 * Senza watermark, la rendicontazione resta candidata a ogni giro finche'
+	 * il recupero non riesce o esce dalla finestra temporale.
+	 */
+	@Test
+	@DisplayName("A 404 (Receipt not found) leaves esegui_recupero_rt=true: the row is retried on the next job execution")
+	void notFoundReceiptIsRetriedOnNextExecution() throws Exception {
+		// Given: a rendicontazione candidate for automatic RT retrieval
+		Long rndId = persistCandidateRendicontazione();
+
+		// First execution: pagoPA answers 404 (Receipt not found)
+		mockRestServer.expect(method(HttpMethod.GET)).andRespond(withStatus(HttpStatus.NOT_FOUND));
+		JobExecution first = jobOperator.start(rtRetrieveJob, uniqueJobParameters());
+		assertEquals(ExitStatus.COMPLETED, first.getExitStatus());
+		mockRestServer.verify();
+
+		assertTrue(currentEseguiRecuperoRt(rndId), "esegui_recupero_rt deve restare true dopo un 404");
+
+		// Second execution: a fresh MockRestServiceServer (new expectation) proves the
+		// SAME row is selected again — if it weren't retried, no second GET would occur
+		// and verify() below would fail.
+		mockRestServer = MockRestServiceServer.createServer(testPagoPARestTemplate);
+		mockRestServer.expect(method(HttpMethod.GET)).andRespond(withStatus(HttpStatus.NOT_FOUND));
+		JobExecution second = jobOperator.start(rtRetrieveJob, uniqueJobParameters());
+		assertEquals(ExitStatus.COMPLETED, second.getExitStatus());
+		mockRestServer.verify();
+
+		assertTrue(currentEseguiRecuperoRt(rndId), "esegui_recupero_rt deve restare true anche dopo il secondo tentativo");
+	}
+
+	private Long persistCandidateRendicontazione() {
+		return transactionTemplate.execute(status -> {
+			DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+					.abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
+			entityManager.persist(dominio);
+
+			Fr fr = Fr.builder().dominio(dominio).build();
+			entityManager.persist(fr);
+
+			SingoloVersamento sv = SingoloVersamento.builder().build();
+			entityManager.persist(sv);
+
+			Rendicontazione rnd = Rendicontazione.builder()
+					.fr(fr)
+					.singoloVersamento(sv)
+					.iuv("01234567890123456")
+					.iur("IUR123456789")
+					.data(LocalDateTime.now())
+					.idPagamento(null)
+					.eseguiRecuperoRt(true)
+					.build();
+			entityManager.persist(rnd);
+			entityManager.flush();
+			return rnd.getId();
+		});
+	}
+
+	private boolean currentEseguiRecuperoRt(Long id) {
+		return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+			entityManager.clear();
+			return entityManager.find(Rendicontazione.class, id).getEseguiRecuperoRt();
+		}));
 	}
 
 	private org.springframework.batch.core.job.parameters.JobParameters uniqueJobParameters() {
