@@ -12,10 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import it.govpay.common.entity.ApplicazioneEntity;
 import it.govpay.common.entity.DominioEntity;
 import it.govpay.rt.batch.entity.Fr;
 import it.govpay.rt.batch.entity.Rendicontazione;
 import it.govpay.rt.batch.entity.SingoloVersamento;
+import it.govpay.rt.batch.entity.Versamento;
 import it.govpay.rt.batch.repository.RendicontazioniRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -35,6 +37,11 @@ class RendicontazioniRepositoryTest {
     private static final String IUV = "01234567890123456";
     private static final String IUR = "IUR123456789";
     private static final LocalDateTime DATA_LIMITE = LocalDateTime.now().minusDays(90);
+    private static final String COD_VERSAMENTO_ENTE = "PENDENZA-1";
+    private static final String COD_APPLICAZIONE = "APP-TEST";
+
+    /** Una sola applicazione per test: cod_applicazione e id_utenza sono unique. */
+    private ApplicazioneEntity applicazione;
 
     @BeforeEach
     void setUp() {
@@ -59,6 +66,66 @@ class RendicontazioniRepositoryTest {
         assertEquals(TAX_CODE, row[1]); // codDominio
         assertEquals(IUV, row[2]);      // iuv
         assertEquals(IUR, row[3]);      // iur
+        assertEquals(COD_VERSAMENTO_ENTE, row[4]); // idPendenza
+        assertEquals(COD_APPLICAZIONE, row[5]);    // idA2A
+    }
+
+    @Test
+    @DisplayName("should find rendicontazione anche quando il singolo versamento non ha pendenza (LEFT JOIN)")
+    void shouldFindRendicontazioneWithoutVersamento() {
+        // Given: un singolo versamento orfano, senza pendenza associata
+        DominioEntity dominio = DominioEntity.builder().codDominio(TAX_CODE)
+                .abilitato(true).ragioneSociale("Test").auxDigit(0).intermediato(true).scaricaFr(false).build();
+        entityManager.persist(dominio);
+
+        Fr fr = Fr.builder().dominio(dominio).build();
+        entityManager.persist(fr);
+
+        SingoloVersamento sv = SingoloVersamento.builder().build();
+        entityManager.persist(sv);
+
+        Rendicontazione rnd = Rendicontazione.builder()
+                .fr(fr)
+                .singoloVersamento(sv)
+                .iuv(IUV)
+                .iur(IUR)
+                .data(LocalDateTime.now())
+                .idPagamento(null)
+                .eseguiRecuperoRt(true)
+                .build();
+        entityManager.persist(rnd);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Object[]> results = rendicontazioniRepository.findRendicontazioneWithNoPagamento(DATA_LIMITE);
+
+        // Then: la riga resta candidata, con le sole colonne della pendenza nulle
+        assertEquals(1, results.size());
+        Object[] row = results.get(0);
+        assertEquals(IUV, row[2]);
+        assertNull(row[4]);
+        assertNull(row[5]);
+    }
+
+    private Versamento creaVersamento(String codVersamentoEnte) {
+        if (applicazione == null) {
+            applicazione = ApplicazioneEntity.builder()
+                    .codApplicazione(COD_APPLICAZIONE)
+                    .autoIuv(false)
+                    .firmaRicevuta("0")
+                    .trusted(false)
+                    .idUtenza(1L)
+                    .build();
+            entityManager.persist(applicazione);
+        }
+
+        Versamento versamento = Versamento.builder()
+                .codVersamentoEnte(codVersamentoEnte)
+                .applicazione(applicazione)
+                .build();
+        entityManager.persist(versamento);
+        return versamento;
     }
 
     @Test
@@ -272,7 +339,7 @@ class RendicontazioniRepositoryTest {
         Fr fr = Fr.builder().dominio(dominio).build();
         entityManager.persist(fr);
 
-        SingoloVersamento sv = SingoloVersamento.builder().build();
+        SingoloVersamento sv = SingoloVersamento.builder().versamento(creaVersamento(COD_VERSAMENTO_ENTE)).build();
         entityManager.persist(sv);
 
         Rendicontazione rnd = Rendicontazione.builder()

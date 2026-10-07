@@ -44,6 +44,8 @@ class EventoRtMapperTest {
     private static final String IUR = "IUR123456";
     private static final String ID_INTERMEDIARIO = "11111111111";
     private static final String ID_STAZIONE = "11111111111_01";
+    private static final String ID_PENDENZA = "PENDENZA-1";
+    private static final String ID_A2A = "APP-TEST";
     private static final String TIPO_EVENTO = "GET_RECEIPT";
     private static final String TRANSACTION_ID = "txn-123";
 
@@ -59,6 +61,8 @@ class EventoRtMapperTest {
                 .iur(IUR)
                 .idIntermediario(ID_INTERMEDIARIO)
                 .idStazione(ID_STAZIONE)
+                .idPendenza(ID_PENDENZA)
+                .idA2A(ID_A2A)
                 .build();
 
         dataStart = OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC);
@@ -78,6 +82,8 @@ class EventoRtMapperTest {
             assertEquals(TAX_CODE, evento.getIdDominio());
             assertEquals(IUV, evento.getIuv());
             assertEquals(IUR, evento.getCcp());
+            assertEquals(ID_PENDENZA, evento.getIdPendenza());
+            assertEquals(ID_A2A, evento.getIdA2A());
             assertEquals(CategoriaEvento.INTERFACCIA, evento.getCategoriaEvento());
             assertEquals(CLUSTER_ID, evento.getClusterId());
             assertEquals(dataStart, evento.getDataEvento());
@@ -108,7 +114,64 @@ class EventoRtMapperTest {
             assertNull(evento.getIdDominio());
             assertNull(evento.getIuv());
             assertNull(evento.getCcp());
+            assertNull(evento.getIdPendenza());
+            assertNull(evento.getIdA2A());
             assertNull(evento.getDatiPagoPA());
+        }
+    }
+
+    @Nested
+    @DisplayName("riferimento pendenza")
+    class RiferimentoPendenzaTest {
+
+        @Test
+        @DisplayName("should valorizzare idPendenza e idA2A anche sugli eventi di errore REST")
+        void shouldPopulatePendenzaOnKoEvent() {
+            HttpClientErrorException exception = HttpClientErrorException.create(
+                    HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, "error".getBytes(), null);
+
+            NuovoEvento evento = mapper.createEventoKo(rtInfo, TIPO_EVENTO, TRANSACTION_ID,
+                    dataStart, dataEnd, null, exception);
+
+            assertEquals(EsitoEvento.KO, evento.getEsito());
+            assertEquals(ID_PENDENZA, evento.getIdPendenza());
+            assertEquals(ID_A2A, evento.getIdA2A());
+        }
+
+        @Test
+        @DisplayName("should valorizzare idPendenza e idA2A anche sugli eventi di errore SOAP")
+        void shouldPopulatePendenzaOnKoSoapEvent() {
+            NuovoEvento evento = mapper.createEventoKoSoap(rtInfo, TIPO_EVENTO, TRANSACTION_ID,
+                    dataStart, dataEnd, new IllegalStateException("boom"));
+
+            assertEquals(ID_PENDENZA, evento.getIdPendenza());
+            assertEquals(ID_A2A, evento.getIdA2A());
+        }
+
+        @Test
+        @DisplayName("should valorizzare idPendenza e idA2A sugli eventi OK")
+        void shouldPopulatePendenzaOnOkEvent() {
+            NuovoEvento evento = mapper.createEventoOk(rtInfo, TIPO_EVENTO, TRANSACTION_ID, dataStart, dataEnd);
+
+            assertEquals(ID_PENDENZA, evento.getIdPendenza());
+            assertEquals(ID_A2A, evento.getIdA2A());
+        }
+
+        @Test
+        @DisplayName("should lasciare null i due campi quando la pendenza non e' stata risolta")
+        void shouldLeaveNullWhenNotResolved() {
+            RtRetrieveContext senzaPendenza = RtRetrieveContext.builder()
+                    .rtId(1L)
+                    .taxCode(TAX_CODE)
+                    .iuv(IUV)
+                    .iur(IUR)
+                    .build();
+
+            NuovoEvento evento = mapper.createEvento(senzaPendenza, TIPO_EVENTO, TRANSACTION_ID, dataStart, dataEnd);
+
+            assertEquals(TAX_CODE, evento.getIdDominio());
+            assertNull(evento.getIdPendenza());
+            assertNull(evento.getIdA2A());
         }
     }
 

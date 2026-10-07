@@ -39,6 +39,9 @@ class RtRetrieveReaderTest {
     private static final String IUV_2 = "65432109876543210";
     private static final String IUR_1 = "IUR123456";
     private static final String IUR_2 = "IUR654321";
+    private static final String ID_PENDENZA_1 = "PENDENZA-1";
+    private static final String ID_PENDENZA_2 = "PENDENZA-2";
+    private static final String ID_A2A = "APP-TEST";
 
     @Nested
     @DisplayName("initToBeRetrieve")
@@ -88,8 +91,8 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
-            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2});
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1, ID_PENDENZA_1, ID_A2A});
+            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2, ID_PENDENZA_2, ID_A2A});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -114,7 +117,7 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUV_1, IUR_1});
+            results.add(new Object[]{BigInteger.valueOf(999L), TAX_CODE_1, IUV_1, IUR_1, ID_PENDENZA_1, ID_A2A});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -123,6 +126,48 @@ class RtRetrieveReaderTest {
             RtRetrieveContext result = reader.read();
             assertNotNull(result);
             assertEquals(999L, result.getRtId());
+        }
+    }
+
+    @Nested
+    @DisplayName("riferimento pendenza")
+    class RiferimentoPendenzaTest {
+
+        @Test
+        @DisplayName("should mappare idPendenza e idA2A dalle colonne della query")
+        void shouldMapIdPendenzaAndIdA2A() {
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
+
+            List<Object[]> results = new ArrayList<>();
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1, ID_PENDENZA_1, ID_A2A});
+            when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
+                    .thenReturn(results);
+
+            reader.initToBeRetrieve();
+
+            RtRetrieveContext context = reader.read();
+            assertNotNull(context);
+            assertEquals(ID_PENDENZA_1, context.getIdPendenza());
+            assertEquals(ID_A2A, context.getIdA2A());
+        }
+
+        @Test
+        @DisplayName("should lasciare null i due campi quando la pendenza non e' risolvibile, senza scartare la riga")
+        void shouldKeepNullsWhenPendenzaNotResolvable() {
+            RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
+
+            List<Object[]> results = new ArrayList<>();
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1, null, null});
+            when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
+                    .thenReturn(results);
+
+            reader.initToBeRetrieve();
+
+            RtRetrieveContext context = reader.read();
+            assertNotNull(context, "la riga resta candidata al recupero anche senza pendenza risolta");
+            assertEquals(TAX_CODE_1, context.getTaxCode());
+            assertNull(context.getIdPendenza());
+            assertNull(context.getIdA2A());
         }
     }
 
@@ -136,8 +181,8 @@ class RtRetrieveReaderTest {
             RtRetrieveReader reader = new RtRetrieveReader(rndRepository, CLOCK, FINESTRA_TEMPORALE);
 
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1});
-            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2});
+            results.add(new Object[]{1L, TAX_CODE_1, IUV_1, IUR_1, ID_PENDENZA_1, ID_A2A});
+            results.add(new Object[]{2L, TAX_CODE_2, IUV_2, IUR_2, ID_PENDENZA_2, ID_A2A});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 
@@ -183,7 +228,7 @@ class RtRetrieveReaderTest {
 
             // Create a result with an Integer (unsupported)
             List<Object[]> results = new ArrayList<>();
-            results.add(new Object[]{Integer.valueOf(1), TAX_CODE_1, IUV_1, IUR_1});
+            results.add(new Object[]{Integer.valueOf(1), TAX_CODE_1, IUV_1, IUR_1, ID_PENDENZA_1, ID_A2A});
             when(rndRepository.findRendicontazioneWithNoPagamento(any(LocalDateTime.class)))
                     .thenReturn(results);
 

@@ -9,9 +9,11 @@ import org.springframework.batch.core.listener.StepExecutionListener;
 import org.springframework.batch.infrastructure.item.ItemReader;
 import org.springframework.stereotype.Component;
 
+import it.govpay.rt.batch.dto.RiferimentoPendenza;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.entity.RtRecupero;
 import it.govpay.rt.batch.repository.RtRecuperoRepository;
+import it.govpay.rt.batch.service.PendenzaResolver;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,11 +29,13 @@ import lombok.extern.slf4j.Slf4j;
 public class RtRecuperoReader implements ItemReader<RtRetrieveContext>, StepExecutionListener {
 
     private final RtRecuperoRepository rtRecuperoRepository;
+    private final PendenzaResolver pendenzaResolver;
 
     private List<RtRetrieveContext> toBeRetrieveList = null;
 
-    public RtRecuperoReader(RtRecuperoRepository rtRecuperoRepository) {
+    public RtRecuperoReader(RtRecuperoRepository rtRecuperoRepository, PendenzaResolver pendenzaResolver) {
         this.rtRecuperoRepository = rtRecuperoRepository;
+        this.pendenzaResolver = pendenzaResolver;
     }
 
     @BeforeStep
@@ -42,11 +46,19 @@ public class RtRecuperoReader implements ItemReader<RtRetrieveContext>, StepExec
         for (RtRecupero riga : righe) {
             log.debug("Recupero puntuale da elaborare id {}, codDominio {}, iuv {}, iur {}",
                     riga.getId(), riga.getCodDominio(), riga.getIuv(), riga.getIur());
+            // La riga di rt_recuperi non porta alcun riferimento alla pendenza: va
+            // risolta qui, prima della chiamata a pagoPA, altrimenti gli eventi di
+            // errore (scritti da RtApiService) resterebbero senza idPendenza/idA2A.
+            RiferimentoPendenza pendenza = pendenzaResolver
+                    .resolve(riga.getCodDominio(), riga.getIuv(), riga.getIur())
+                    .orElse(null);
             toBeRetrieveList.add(RtRetrieveContext.builder()
                     .rtId(riga.getId())
                     .taxCode(riga.getCodDominio())
                     .iuv(riga.getIuv())
                     .iur(riga.getIur())
+                    .idPendenza(pendenza != null ? pendenza.idPendenza() : null)
+                    .idA2A(pendenza != null ? pendenza.idA2A() : null)
                     .idOperatore(riga.getIdOperatore())
                     .build());
         }

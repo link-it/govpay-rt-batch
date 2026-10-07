@@ -14,9 +14,22 @@ import it.govpay.rt.batch.entity.Rendicontazione;
 @Repository
 public interface RendicontazioniRepository extends JpaRepository<Rendicontazione, Long> {
 
-    @Query("SELECT r.id, d.codDominio, r.iuv, r.iur " +
+    /**
+     * Candidate alla scansione schedulata. Le colonne 5 e 6
+     * ({@code cod_versamento_ente}, {@code cod_applicazione}) alimentano
+     * {@code idPendenza}/{@code idA2A} degli eventi GDE.
+     *
+     * <p>I due join aggiunti sono LEFT di proposito, benche' entrambe le FK
+     * siano NOT NULL a schema: l'insieme delle righe candidate deve restare
+     * esattamente quello di prima, perche' una riga persa qui e' una RT che
+     * non verrebbe piu' recuperata. Una pendenza non risolvibile costa un
+     * {@code idPendenza} nullo nell'evento, non un recupero mancato.
+     */
+    @Query("SELECT r.id, d.codDominio, r.iuv, r.iur, v.codVersamentoEnte, a.codApplicazione " +
             "FROM Rendicontazione r " +
                  "JOIN r.singoloVersamento sv " +
+                 "LEFT JOIN sv.versamento v " +
+                 "LEFT JOIN v.applicazione a " +
                  "JOIN r.fr f " +
                  "JOIN f.dominio d " +
             "WHERE r.singoloVersamento IS NOT NULL AND " +

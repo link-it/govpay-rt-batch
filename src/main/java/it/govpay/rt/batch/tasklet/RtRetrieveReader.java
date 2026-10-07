@@ -55,11 +55,21 @@ public class RtRetrieveReader implements ItemReader<RtRetrieveContext>, StepExec
 		}
 		for (Object[] rndInfo : rndInfos) {
 			log.debug("Ricevuta da recuperare id {}, taxCode {}, iuv {}, iur {}", rndInfo[0], rndInfo[1], rndInfo[2], rndInfo[3]);
+			// idPendenza/idA2A arrivano gia' dalla query (join su singoli_versamenti):
+			// nessuna lettura aggiuntiva, e sono disponibili prima della chiamata a
+			// pagoPA, quindi finiscono anche negli eventi di errore.
+			String idPendenza = (String) rndInfo[4];
+			String idA2A = (String) rndInfo[5];
+			if (idPendenza == null) {
+				log.debug("Pendenza non risolta per la rendicontazione id {}: evento GDE senza idPendenza", rndInfo[0]);
+			}
 			RtRetrieveContext rtRetrieveCtx = RtRetrieveContext.builder()
 			                                                   .rtId(convertToLong(rndInfo[0]))
 			                                                   .taxCode((String)rndInfo[1])
 			                                                   .iuv((String)rndInfo[2])
 			                                                   .iur((String)rndInfo[3])
+			                                                   .idPendenza(idPendenza)
+			                                                   .idA2A(idA2A)
 			                                                   .build();
 			toBeRetrieveList.add(rtRetrieveCtx);
 		}

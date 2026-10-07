@@ -69,6 +69,10 @@ public class EventoRtMapper {
         	nuovoEvento.setIdDominio(rtInfo.getTaxCode());
         	nuovoEvento.setIuv(rtInfo.getIuv());
         	nuovoEvento.setCcp(rtInfo.getIur());
+        	// Risolti dai reader prima della chiamata a pagoPA, quindi presenti anche
+        	// sugli eventi di errore. Restano null se la pendenza non e' risolvibile.
+        	nuovoEvento.setIdPendenza(rtInfo.getIdPendenza());
+        	nuovoEvento.setIdA2A(rtInfo.getIdA2A());
         	nuovoEvento.setDatiPagoPA(createDatiPagoPA(rtInfo));
         }
 
