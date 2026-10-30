@@ -52,13 +52,11 @@ Requisiti: JDK 21 e Maven 3.8.1 o successivo.
 mvn clean install
 ```
 
-Il risultato è il fat jar `target/govpay-rt-batch.jar`. La build genera il client dell'API pagoPA da `src/main/resources/bizEvents.yaml` e le classi paForNode da `src/main/resources/xsd`, esegue i test e l'analisi OWASP Dependency-Check delle dipendenze; per escludere l'analisi OWASP, per esempio in sviluppo:
+Il risultato è il fat jar `target/govpay-rt-batch.jar`. La build genera il client dell'API pagoPA da `src/main/resources/bizEvents.yaml` e le classi paForNode da `src/main/resources/xsd`, esegue i test e l'analisi OWASP Dependency-Check delle dipendenze (esecuzione definita in `govpay-bom`); per escludere l'analisi OWASP, per esempio in sviluppo:
 
 ```bash
-mvn clean install -Dowasp=none
+mvn clean install -Dowasp.phase=none
 ```
-
-L'analisi è un'esecuzione definita nel `pom.xml` del progetto sulla fase `${owasp}`, che sostituisce quella di `govpay-bom`: `-Dowasp.phase=none` da solo non la disattiva.
 
 Per produrre anche `target/sql.zip`, con lo schema Spring Batch per ogni database e gli script di svecchiamento dei metadati, usato dall'immagine Docker e allegato alle release:
 
