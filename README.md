@@ -80,7 +80,6 @@ Le proprietà si impostano in `application.properties`, da riga di comando (`-D<
 | `govpay.batch.recupero-puntuale.retention-giorni` | `7` | Giorni dopo cui le righe di `rt_recuperi` elaborate senza successo vengono cancellate |
 | `scheduler.rtRetrieveJob.fixedDelayString` | `7200000` | Intervallo tra la fine di un'esecuzione e l'avvio della successiva, in ms (2 ore) |
 | `scheduler.initialDelayString` | `1` | Ritardo della prima esecuzione dopo l'avvio, in ms |
-| `govpay.batch.enabled` | `true` | Letta in `BatchProperties` ma non usata: per non schedulare il job usare il profilo `cron` o un profilo diverso da `default` |
 
 ### Invio delle ricevute a GovPay
 
