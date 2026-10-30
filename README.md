@@ -258,7 +258,7 @@ Variabili d'ambiente dell'immagine, oltre alle proprietà Spring Boot in forma d
 | `GOVPAY_RT_MIN_POOL` | no | `2` | Connessioni minime inattive del pool |
 | `GOVPAY_RT_MAX_POOL` | no | `10` | Connessioni massime del pool |
 | `GOVPAY_RT_BATCH_USA_CRON` | no | - | `true`, `si`, `yes` o `1`: esecuzione singola con il profilo `cron`, senza server HTTP; il container termina a fine job e va pianificato dall'esterno (es. CronJob Kubernetes). Altrimenti scheduler interno |
-| `GOVPAY_RT_BATCH_INTERVALLO_CRON` | no | `120` | Minuti tra un'esecuzione e l'altra con lo scheduler interno: l'entrypoint li converte in `SCHEDULER_RTRETRIEVEJOB_FIXEDDELAYSTRING`, sovrascrivendo un valore impostato direttamente |
+| `GOVPAY_RT_BATCH_INTERVALLO_CRON` | no | `120` | Minuti tra un'esecuzione e l'altra con lo scheduler interno (intero maggiore di zero): l'entrypoint li converte in `SCHEDULER_RTRETRIEVEJOB_FIXEDDELAYSTRING`. Se `SCHEDULER_RTRETRIEVEJOB_FIXEDDELAYSTRING` (in ms) è impostata direttamente, ha la precedenza e questa variabile è ignorata |
 | `SERVER_PORT` | no | `10001` | Porta HTTP con lo scheduler interno |
 | `MANAGEMENT_SERVER_PORT` | no | porta del servizio | Porta dedicata agli endpoint actuator |
 | `MANAGEMENT_ENDPOINTS` | no | `health,info,metrics,prometheus` | Endpoint actuator esposti |
@@ -279,7 +279,7 @@ Variabili d'ambiente dell'immagine, oltre alle proprietà Spring Boot in forma d
 | `GOVPAY_RT_JVM_MAX_DIRECT_MEMORY_SIZE` | no | - | `-XX:MaxDirectMemorySize` della JVM |
 | `JAVA_OPTS` | no | - | Opzioni aggiuntive della JVM |
 
-L'identificativo del nodo (`govpay.batch.cluster-id`) è impostato dall'entrypoint, con la variabile `GOVPAY_BATCH_CLUSTER_ID`, all'indirizzo IP del container o al suo hostname se l'IP non si ricava: un valore passato dall'esterno viene sovrascritto. Le altre variabili che compaiono negli script dell'immagine (es. `INTERVALLO_MINUTI`, `HSQLDB_SHA256`) sono interne e non vanno impostate. Il log di avvio dell'entrypoint è in `/tmp/entrypoint_debug.log` dentro il container.
+L'identificativo del nodo (`govpay.batch.cluster-id`) è impostato dall'entrypoint, con la variabile `GOVPAY_BATCH_CLUSTER_ID`, all'indirizzo IP del container o al suo hostname se l'IP non si ricava: un valore passato dall'esterno viene sovrascritto. Le altre variabili che compaiono negli script dell'immagine (es. `INTERVALLO_MINUTI`, `HSQLDB_SHA256`) sono interne e non vanno impostate.
 
 Scansione delle vulnerabilità dell'immagine: [docker/SCANSIONE.md](docker/SCANSIONE.md). Per costruire l'immagine in locale da un jar compilato: `cd docker && ./build_image.sh -l ../target/govpay-rt-batch.jar -t <repository>:<tag>`, dopo `mvn clean install -Pjar,dist` (lo script prende gli script SQL da `target/sql.zip`).
 
