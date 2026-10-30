@@ -49,10 +49,11 @@ Le modifiche ai livelli di log fatte dalla console (riga `log_level` della tabel
 Requisiti: JDK 21 e Maven 3.8.1 o successivo.
 
 ```bash
-mvn clean install
+mvn clean install                # profilo jar (default): fat jar eseguibile
+mvn clean install -P war         # war per application server
 ```
 
-Il risultato è il fat jar `target/govpay-rt-batch.jar`. La build genera il client dell'API pagoPA da `src/main/resources/bizEvents.yaml` e le classi paForNode da `src/main/resources/xsd`, esegue i test e l'analisi OWASP Dependency-Check delle dipendenze (esecuzione definita in `govpay-bom`); per escludere l'analisi OWASP, per esempio in sviluppo:
+Il profilo sceglie il packaging; il risultato è in `target/govpay-rt-batch.jar` o `target/govpay-rt-batch.war`. Il jar non contiene i driver JDBC, che si aggiungono a runtime (vedi [Esecuzione](#esecuzione)); il war usa il datasource dell'application server. La build genera il client dell'API pagoPA da `src/main/resources/bizEvents.yaml` e le classi paForNode da `src/main/resources/xsd`, esegue i test e l'analisi OWASP Dependency-Check delle dipendenze (esecuzione definita in `govpay-bom`); per escludere l'analisi OWASP, per esempio in sviluppo:
 
 ```bash
 mvn clean install -Dowasp.phase=none
@@ -125,6 +126,7 @@ I client verso pagoPA sono creati una volta per connettore e riusati: dopo una m
 | Proprietà | Default | Descrizione |
 |-----------|---------|-------------|
 | `spring.datasource.url` | - | URL JDBC del database di GovPay (obbligatoria) |
+| `spring.datasource.jndi-name` | - | Nome JNDI del datasource, al posto di URL e credenziali (deploy del war) |
 | `spring.datasource.username` | - | Utente del database |
 | `spring.datasource.password` | - | Password del database |
 | `spring.datasource.driver-class-name` | dedotto dall'URL | Classe del driver JDBC |
@@ -210,6 +212,16 @@ java -Dloader.path=./jdbc-drivers \
      -Dgovpay.auth.username=<utente> \
      -Dgovpay.auth.password=<password> \
      -jar target/govpay-rt-batch.jar --spring.profiles.active=cron
+```
+
+### War su application server
+
+Il war (profilo `war`) si installa su un servlet container Jakarta EE 11, per esempio Tomcat 11, e usa un datasource JNDI dell'application server, con il driver JDBC nelle librerie del server. Il datasource si indica con `spring.datasource.jndi-name`, le altre proprietà come per il jar, per esempio come proprietà di sistema in `JAVA_OPTS`. Il war risponde sotto il proprio context path (es. `/govpay-rt-batch/api/batch`, `/govpay-rt-batch/actuator/health`).
+
+```bash
+JAVA_OPTS="-Dspring.datasource.jndi-name=java:comp/env/jdbc/govpay \
+           -Dgovpay.url=<url del servizio paForNode di GovPay> \
+           -Dgovpay.auth.username=<utente> -Dgovpay.auth.password=<password>"
 ```
 
 ## Esecuzione con Docker
