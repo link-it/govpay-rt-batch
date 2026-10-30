@@ -269,7 +269,7 @@ Variabili d'ambiente dell'immagine, oltre alle proprietà Spring Boot in forma d
 | `GOVPAY_RT_LIVE_DB_CHECK_MAX_RETRY` | no | `30` | Tentativi di connessione alla porta del database |
 | `GOVPAY_RT_LIVE_DB_CHECK_SLEEP_TIME` | no | `2` | Secondi tra un tentativo e l'altro |
 | `GOVPAY_RT_LIVE_DB_CHECK_CONNECT_TIMEOUT` | no | `5` | Timeout di ogni tentativo di connessione, in secondi |
-| `GOVPAY_RT_READY_DB_CHECK_SKIP` | no | `FALSE` | Salta la verifica della tabella e crea comunque lo schema. **Oggi con `TRUE` l'inizializzazione fallisce**: il comando SqlTool è definito solo dentro la verifica |
+| `GOVPAY_RT_READY_DB_CHECK_SKIP` | no | `FALSE` | Salta la verifica della tabella e crea comunque lo schema |
 | `GOVPAY_RT_READY_DB_CHECK_MAX_RETRY` | no | `5` | Tentativi della verifica della tabella |
 | `GOVPAY_RT_READY_DB_CHECK_SLEEP_TIME` | no | `2` | Secondi tra un tentativo e l'altro |
 | `GOVPAY_RT_JVM_MAX_RAM_PERCENTAGE` | no | `80` | `-XX:MaxRAMPercentage` della JVM |
