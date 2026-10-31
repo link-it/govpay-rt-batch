@@ -15,7 +15,7 @@
     <groupId>it.govpay</groupId>
     <artifactId>govpay-rt-batch</artifactId>
     <version>2.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>${packaging.type}</packaging>
 
     <name>GovPay RT Batch</name>
     <description>Batch per il recupero delle ricevute da pagoPA</description>
@@ -25,13 +25,10 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- OWASP Dependency Check -->
-        <owasp.falsePositives.dir>src/main/resources/owasp/falsePositives</owasp.falsePositives.dir>
-        <owasp>verify</owasp> <!-- owasp phase, use 'none' for disable -->
-        <owasp.plugin.autoUpdate>true</owasp.plugin.autoUpdate>
-        <owasp.plugin.failBuildOnCVSS>11</owasp.plugin.failBuildOnCVSS>
-        <owasp.ossindex.prevents429.sleep>5</owasp.ossindex.prevents429.sleep> <!-- https://github.com/sonatype/ossindex-maven/issues/17 -->
+        <!-- Valori del profilo jar, usati anche quando si attiva solo un altro
+             profilo (es. -Pdist) e il profilo jar non e' attivo -->
+        <packaging.type>jar</packaging.type>
+        <spring-boot.layout>ZIP</spring-boot.layout>
 
         <!-- SonarCloud -->
         <sonar.coverage.exclusions>**/test/**,**/*Test*.java</sonar.coverage.exclusions>
@@ -61,6 +58,8 @@
             </activation>
             <properties>
                 <packaging.type>jar</packaging.type>
+                <!-- Fat jar con PropertiesLauncher: i driver JDBC si aggiungono a runtime con loader.path -->
+                <spring-boot.layout>ZIP</spring-boot.layout>
             </properties>
             <dependencies>
                 <dependency>
@@ -94,12 +93,21 @@
             <id>war</id>
             <properties>
                 <packaging.type>war</packaging.type>
+                <!-- War per application server (datasource JNDI): con il layout ZIP il war
+                     verrebbe riorganizzato come un jar e non sarebbe deployabile -->
+                <spring-boot.layout>WAR</spring-boot.layout>
             </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-starter-tomcat</artifactId>
                     <scope>provided</scope>
+                </dependency>
+                <!-- Database dei test; a runtime il war usa il datasource dell'application server -->
+                <dependency>
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                    <scope>test</scope>
                 </dependency>
             </dependencies>
         </profile>
@@ -313,7 +321,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <layout>ZIP</layout>
+                    <layout>${spring-boot.layout}</layout>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
@@ -370,28 +378,12 @@
                 </executions>
             </plugin>
 
-            <!-- OWASP Dependency Check Plugin for Security Scanning -->
+            <!-- OWASP Dependency Check: esecuzione check-owasp e configurazione
+                 (fase ${owasp.phase}, ${owasp.autoUpdate}, soglia CVSS) sono in govpay-bom.
+                 Per escluderla: -Dowasp.phase=none -->
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <executions>
-                    <execution>
-                        <id>check-owasp</id>
-                        <phase>${owasp}</phase>
-                        <configuration>
-                            <autoUpdate>${owasp.plugin.autoUpdate}</autoUpdate>
-                            <failBuildOnCVSS>${owasp.plugin.failBuildOnCVSS}</failBuildOnCVSS>
-                            <format>ALL</format>
-                            <nvdApiDelay>120000</nvdApiDelay><!-- 2 minuti -->
-                            <nvdMaxRetryCount>3</nvdMaxRetryCount>
-                            <!-- Disable OSS Index analyzer to avoid rate limits and auth issues -->
-                            <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
-                        </configuration>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

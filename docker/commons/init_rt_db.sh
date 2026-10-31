@@ -8,7 +8,7 @@
 # 3. Esecuzione script SQL se il database non e' inizializzato
 #
 ##############################################################################
-set -x
+# Niente tracing (set -x): scriverebbe nei log la password del database.
 set -e
 
 # Configurazione con valori di default
@@ -73,8 +73,13 @@ if [ "${GOVPAY_RT_LIVE_DB_CHECK_SKIP^^}" == "FALSE" ]; then
     DB_ALIVE=1
 
     while [ ${DB_ALIVE} -ne 0 ] && [ ${RETRY} -lt ${GOVPAY_RT_LIVE_DB_CHECK_MAX_RETRY} ]; do
-        nc -w ${GOVPAY_RT_LIVE_DB_CHECK_CONNECT_TIMEOUT} -z "${DB_HOST}" "${DB_PORT}"
-        DB_ALIVE=$?
+        # Con set -e un nc fallito fuori da un if chiuderebbe lo script al primo
+        # tentativo, senza riprovare.
+        if nc -w ${GOVPAY_RT_LIVE_DB_CHECK_CONNECT_TIMEOUT} -z "${DB_HOST}" "${DB_PORT}"; then
+            DB_ALIVE=0
+        else
+            DB_ALIVE=$?
+        fi
         RETRY=$((RETRY + 1))
 
         if [ ${DB_ALIVE} -ne 0 ]; then
@@ -138,6 +143,10 @@ log_info "URL JDBC: ${JDBC_URL}"
 ##############################################################################
 
 SQLTOOL_RC_FILE="/tmp/sqltool_rt.rc"
+# Il file contiene la password del database: leggibile solo dall'utente e
+# cancellato all'uscita dello script, insieme agli script SQL temporanei.
+umask 077
+trap 'rm -f "${SQLTOOL_RC_FILE}"; rm -rf /tmp/rt_sql' EXIT
 cat > ${SQLTOOL_RC_FILE} <<EOSQLTOOL
 urlid rt_db
 url ${JDBC_URL}
@@ -147,6 +156,10 @@ driver ${GOVPAY_DS_DRIVER_CLASS}
 transiso TRANSACTION_READ_COMMITTED
 charset UTF-8
 EOSQLTOOL
+
+# Comando SqlTool, usato sia dal readiness check sia dalla creazione dello
+# schema: va definito qui perche' il readiness check si puo' saltare.
+INVOCAZIONE_CLIENT="-Dfile.encoding=UTF-8 -cp ${GOVPAY_DS_JDBC_LIBS}/*:/opt/hsqldb-${HSQLDB_FULLVERSION}/hsqldb/lib/sqltool.jar org.hsqldb.cmdline.SqlTool --rcFile=${SQLTOOL_RC_FILE} "
 
 ##############################################################################
 # READINESS CHECK (Esistenza Tabella)
@@ -164,7 +177,7 @@ if [ "${GOVPAY_RT_READY_DB_CHECK_SKIP^^}" == "FALSE" ]; then
             CHECK_QUERY="SELECT count(*) FROM information_schema.tables WHERE LOWER(table_name)='${GOVPAY_RT_DB_CHECK_TABLE,,}' AND LOWER(table_schema)='${GOVPAY_DB_NAME,,}';"
             ;;
         oracle)
-            CHECK_QUERY="SELECT count(*) FROM all_tables WHERE LOWER(table_name)='${GOVPAY_RT_DB_CHECK_TABLE,,}' AND LOWER(owner)='${GOVPAY_DB_USER^^}';"
+            CHECK_QUERY="SELECT count(*) FROM all_tables WHERE LOWER(table_name)='${GOVPAY_RT_DB_CHECK_TABLE,,}' AND UPPER(owner)='${GOVPAY_DB_USER^^}';"
             ;;
         sqlserver)
             CHECK_QUERY="SELECT count(*) FROM information_schema.tables WHERE LOWER(table_name)='${GOVPAY_RT_DB_CHECK_TABLE,,}' AND LOWER(table_catalog)='${GOVPAY_DB_NAME,,}';"
@@ -173,8 +186,6 @@ if [ "${GOVPAY_RT_READY_DB_CHECK_SKIP^^}" == "FALSE" ]; then
 
     RETRY=0
     TABLE_EXISTS=-1
-
-    INVOCAZIONE_CLIENT="-Dfile.encoding=UTF-8 -cp ${GOVPAY_DS_JDBC_LIBS}/*:/opt/hsqldb-${HSQLDB_FULLVERSION}/hsqldb/lib/sqltool.jar org.hsqldb.cmdline.SqlTool --rcFile=${SQLTOOL_RC_FILE} "
 
     while [ ${TABLE_EXISTS} -lt 0 ] && [ ${RETRY} -lt ${GOVPAY_RT_READY_DB_CHECK_MAX_RETRY} ]; do
         TABLE_COUNT=$(java ${INVOCAZIONE_CLIENT} \
@@ -264,20 +275,19 @@ esac
 # Esecuzione script SQL
 log_info "Esecuzione script SQL in corso..."
 
+# Con set -e un errore di SqlTool chiuderebbe lo script senza il messaggio
+# d'errore: l'exit code si raccoglie con ||.
+SQL_EXIT_CODE=0
 java ${INVOCAZIONE_CLIENT} \
     --continueOnErr=false \
-    rt_db <<EOSQL
+    rt_db <<EOSQL || SQL_EXIT_CODE=$?
 SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 ${START_TRANSACTION}
 \i /tmp/rt_sql/schema-${GOVPAY_DB_TYPE}.sql
 COMMIT;
 EOSQL
 
-SQL_EXIT_CODE=$?
-
-# Pulizia
-#rm -rf /tmp/rt_sql
-#rm -f ${SQLTOOL_RC_FILE}
+# Pulizia: file rc e script temporanei si cancellano con il trap su EXIT
 
 if [ ${SQL_EXIT_CODE} -eq 0 ]; then
     log_info "========================================"
