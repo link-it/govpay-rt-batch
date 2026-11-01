@@ -3,6 +3,7 @@ package it.govpay.rt.batch.gde.mapper;
 import it.gov.pagopa.pagopa_api.pa.pafornode.PaSendRTV2Response;
 import it.gov.pagopa.pagopa_api.xsd.common_types.v1_0.StOutcome;
 import it.govpay.gde.client.beans.*;
+import it.govpay.rt.batch.config.BatchInfraConfig;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,7 +35,7 @@ public class EventoRtMapper {
 
     private static final Pattern HTTP_STATUS_PATTERN = Pattern.compile("\\[(\\d{3})\\]");
 
-    @Value("${govpay.batch.cluster-id}")
+    @Value(BatchInfraConfig.CLUSTER_ID)
     private String clusterId;
 
     /**
