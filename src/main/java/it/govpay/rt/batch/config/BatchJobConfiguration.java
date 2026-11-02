@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.job.parameters.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,7 +65,6 @@ public class BatchJobConfiguration {
         BatchExecutionRecapListener batchExecutionRecapListener
     ) {
         return new JobBuilder(Costanti.RT_RETRIEVE_JOB_NAME, jobRepository)
-            .incrementer(new RunIdIncrementer())
             .listener(batchExecutionRecapListener)
             .start(rtRetrieveTasklet)
             .next(rtRecuperoPuntualeStep)
