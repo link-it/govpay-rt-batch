@@ -95,6 +95,7 @@ L'autenticazione Basic è sempre inviata, anche con password vuota.
 
 | Proprietà | Default | Descrizione |
 |-----------|---------|-------------|
+| `govpay.batch.enabled` | `true` | Con `false` lo scheduler interno non avvia il job (all'avvio il log lo segnala); `/run` e il profilo `cron` restano disponibili. Nel profilo `cron` non ha effetto |
 | `govpay.batch.cluster-id` | nome dell'host (nel container l'indirizzo IP) | Identificativo del nodo, registrato nelle esecuzioni, negli eventi del GDE e nel tag `nodo` delle metriche: deve essere diverso su ogni nodo (vedi [Più nodi](#più-nodi)) |
 | `govpay.batch.stale-threshold-minutes` | `120` | Minuti senza aggiornamenti dopo cui un'esecuzione in corso è considerata bloccata e può essere superata |
 | `govpay.batch.job-repository.jdbc.enabled` | `true` | Metadati Spring Batch su database (da `govpay-common`); senza, il coordinamento tra nodi non funziona |

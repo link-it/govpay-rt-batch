@@ -72,6 +72,7 @@ RUN chown -R govpay:0 /usr/local/bin/entrypoint.sh /usr/local/bin/init_rt_db.sh 
 USER govpay
 
 ENV SPRING_BATCH_JOB_ENABLED=false \
+    GOVPAY_BATCH_ENABLED=true \
     GOVPAY_BATCH_STALE_THRESHOLD_MINUTES=120 \
     MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/actuator \
     SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=20000 \
