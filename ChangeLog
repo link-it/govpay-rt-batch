@@ -1,5 +1,13 @@
 2026-11-03  Giuliano Pintori <pintori@link.it>
 
+	* [Batch] Tolto il RunIdIncrementer dal job. Da Spring Batch 6
+	JobOperator.start() ignora i parametri passati a un job con incrementer e
+	avvia l'istanza successiva con i soli parametri dell'incrementer: si
+	perdevano ClusterID, TriggerType e CorrelationID impostati da
+	JobExecutionHelper, e all'avvio il log riportava l'ERROR "ha un
+	JobParametersIncrementer" (link-it/govpay-common#39). Ogni istanza resta
+	unica grazie al parametro When.
+
 	* [Batch] Cluster-id del nodo come default (govpay-common#35, #36).
 	Il cluster-id identifica il nodo e deve essere diverso su ogni nodo, ma
 	fuori dal container il default era la costante GovPay-RT-Batch, uguale su
@@ -10,13 +18,6 @@
 	cambia nulla: l'entrypoint imposta l'indirizzo IP.
 	Negli eventi del GDE dei deploy fuori container il clusterId passa da
 	GovPay-RT-Batch al nome dell'host.
-
-	* [Fix] Parametri di JobExecutionHelper persi (govpay-common#39).
-	Con RunIdIncrementer sul job, Spring Batch 6 ignorava i parametri passati da
-	JobExecutionHelper: ClusterID, TriggerType e CorrelationID non arrivavano
-	all'esecuzione, un job in corso su un altro nodo era classificato in
-	esecuzione su quello corrente e il correlation id non restava nei metadati.
-	Tolto l'incrementer: il parametro When rende gia' unica ogni istanza.
 
 	* [Monitoraggio] Metriche di esecuzione dei batch (govpay-common#32).
 	Lo scrape /actuator/prometheus riporta le serie govpay_batch_* con il tag
