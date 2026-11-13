@@ -2,6 +2,8 @@ package it.govpay.rt.batch.service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,7 @@ import it.govpay.rt.batch.client.GovpayClient;
 import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.service.GdeService;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service for interacting with Govpay API
@@ -33,12 +36,14 @@ public class PaForNodeService {
 	private final GdeService gdeService;
 	private final GovpayClient govpayClient;
 	private final OperatorePrincipalResolver operatorePrincipalResolver;
+	private final ObjectMapper objectMapper;
 
 	public PaForNodeService(GdeService gdeService, GovpayClient govpayClient,
-			OperatorePrincipalResolver operatorePrincipalResolver) {
+			OperatorePrincipalResolver operatorePrincipalResolver, ObjectMapper objectMapper) {
 		this.gdeService = gdeService;
 		this.govpayClient = govpayClient;
 		this.operatorePrincipalResolver = operatorePrincipalResolver;
+		this.objectMapper = objectMapper;
 	}
 
 	public boolean sendReceipt(RtRetrieveContext rtInfo, PaSendRTV2Request receiptToSend) {
@@ -76,13 +81,42 @@ public class PaForNodeService {
 			}
 
 			gdeService.saveSendReceiptKo(rtInfo, receiptToSend,
-					new IllegalStateException("Outcome KO: " + response.getFault()), dataStart, dataEnd);
+					new IllegalStateException(descriviFault(response)), dataStart, dataEnd);
 			return false;
 		} catch (Exception e) {
 			dataEnd = OffsetDateTime.now(ZoneOffset.UTC);
 			log.error("Errore durante l'invio della ricevuta a govpay", e);
 			gdeService.saveSendReceiptKo(rtInfo, receiptToSend, e, dataStart, dataEnd);
 			return false;
+		}
+	}
+
+	/**
+	 * Dettaglio dell'esito KO per il giornale degli eventi: il fault restituito
+	 * da GovPay serializzato in JSON, con i soli campi valorizzati (issue #40).
+	 * CtFaultBean e' generata da JAXB e non ha toString(): concatenarla
+	 * produceva solo il nome della classe e l'hash dell'oggetto.
+	 */
+	private String descriviFault(PaSendRTV2Response response) {
+		CtFaultBean fault = response.getFault();
+		if (fault == null) {
+			return "Esito " + response.getOutcome() + " senza fault nella risposta di GovPay";
+		}
+		Map<String, Object> campi = new LinkedHashMap<>();
+		aggiungi(campi, "faultCode", fault.getFaultCode());
+		aggiungi(campi, "faultString", fault.getFaultString());
+		aggiungi(campi, "id", fault.getId());
+		aggiungi(campi, "description", fault.getDescription());
+		aggiungi(campi, "serial", fault.getSerial());
+		aggiungi(campi, "originalFaultCode", fault.getOriginalFaultCode());
+		aggiungi(campi, "originalFaultString", fault.getOriginalFaultString());
+		aggiungi(campi, "originalDescription", fault.getOriginalDescription());
+		return objectMapper.writeValueAsString(campi);
+	}
+
+	private static void aggiungi(Map<String, Object> campi, String nome, Object valore) {
+		if (valore != null) {
+			campi.put(nome, valore);
 		}
 	}
 
