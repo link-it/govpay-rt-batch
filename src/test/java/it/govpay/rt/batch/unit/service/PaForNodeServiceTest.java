@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -21,6 +22,7 @@ import it.govpay.rt.batch.dto.RtRetrieveContext;
 import it.govpay.rt.batch.gde.service.GdeService;
 import it.govpay.rt.batch.service.OperatorePrincipalResolver;
 import it.govpay.rt.batch.service.PaForNodeService;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaForNodeService")
@@ -45,7 +47,8 @@ class PaForNodeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PaForNodeService(gdeService, govpayClient, operatorePrincipalResolver);
+        service = new PaForNodeService(gdeService, govpayClient, operatorePrincipalResolver,
+                JsonMapper.builder().build());
 
         rtInfo = RtRetrieveContext.builder()
                 .rtId(1L)
@@ -93,6 +96,43 @@ class PaForNodeServiceTest {
             verify(govpayClient).sendReceipt(request, null);
             verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), any(Exception.class), any(), any());
             verify(gdeService, never()).saveSendReceiptOk(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("issue #40: il dettaglio del KO e' il fault in JSON, senza prefisso e senza campi nulli")
+        void shouldDescribeFaultAsJson() {
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            response.setOutcome(StOutcome.KO);
+            CtFaultBean fault = new CtFaultBean();
+            fault.setFaultCode("PAA_SINTASSI_XSD");
+            fault.setFaultString("Errore di sintassi");
+            fault.setId("12345678901");
+            fault.setDescription("cvc-complex-type.2.4.a");
+            fault.setSerial(1);
+            response.setFault(fault);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
+
+            assertFalse(service.sendReceipt(rtInfo, request));
+
+            ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
+            verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), captor.capture(), any(), any());
+            assertEquals("{\"faultCode\":\"PAA_SINTASSI_XSD\",\"faultString\":\"Errore di sintassi\","
+                    + "\"id\":\"12345678901\",\"description\":\"cvc-complex-type.2.4.a\",\"serial\":1}",
+                    captor.getValue().getMessage());
+        }
+
+        @Test
+        @DisplayName("issue #40: senza fault il dettaglio lo dice in modo esplicito")
+        void shouldDescribeMissingFault() {
+            PaSendRTV2Response response = new PaSendRTV2Response();
+            response.setOutcome(StOutcome.KO);
+            when(govpayClient.sendReceipt(request, null)).thenReturn(response);
+
+            assertFalse(service.sendReceipt(rtInfo, request));
+
+            ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
+            verify(gdeService).saveSendReceiptKo(eq(rtInfo), eq(request), captor.capture(), any(), any());
+            assertEquals("Esito KO senza fault nella risposta di GovPay", captor.getValue().getMessage());
         }
 
         @Test
